@@ -936,8 +936,19 @@ io.on('connection', (socket) => {
   });
 
   socket.on('start_game', ({ roomId }) => {
+    console.log('收到开始游戏请求:', { roomId, from: socket.nickname });
     const room = gameRooms.get(roomId);
-    if (!room || room.host !== socket.nickname) return;
+    if (!room) {
+      console.log('房间不存在:', roomId);
+      socket.emit('notification', { message: '房间不存在' });
+      return;
+    }
+    if (room.host !== socket.nickname) {
+      console.log('不是房主，无权开始:', { host: room.host, user: socket.nickname });
+      socket.emit('notification', { message: '只有房主才能开始游戏' });
+      return;
+    }
+    console.log('开始游戏:', room.name);
 
     // 确保至少有2个玩家（可以加机器人）
     if (room.players.length < 2) {

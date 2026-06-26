@@ -312,9 +312,13 @@ function fileQuery(text, params) {
 
   if (text.includes('SELECT * FROM moments')) {
     const momentData = readJSONFile(MOMENTS_FILE, { moments: [], momentIdCounter: 1 });
-    const author = params[0];
-    const moments = momentData.moments.filter(m => m.author === author);
-    return { rows: moments };
+    if (params && params[0]) {
+      const author = params[0];
+      const moments = momentData.moments.filter(m => m.author === author);
+      return { rows: moments };
+    } else {
+      return { rows: momentData.moments };
+    }
   }
 
   if (text.includes('INSERT INTO moments')) {

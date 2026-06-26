@@ -614,10 +614,13 @@ socket.on('online_users', (users) => {
   const list = document.getElementById('friends-list');
   const countEl = document.getElementById('online-count');
   
-  if (!list || !countEl) return;
+  if (countEl) {
+    countEl.textContent = users.length;
+  }
+  
+  if (!list) return;
   
   const otherUsers = users.filter(u => u.nickname !== currentUser?.nickname);
-  countEl.textContent = users.length;
   
   if (otherUsers.length === 0) {
     list.innerHTML = '<p class="empty-text">暂无在线闺蜜~</p>';
@@ -920,7 +923,7 @@ let currentRoom = null;
 
 function enterGame(gameType) {
   currentGameType = gameType;
-  refreshRoomList();
+  showCreateRoomModal();
 }
 
 function refreshRoomList() {
@@ -1013,14 +1016,22 @@ socket.on('room_joined', (room) => {
 socket.on('player_joined', (player) => {
   if (currentRoom) {
     currentRoom.players.push(player);
-    updateGamePlayers();
+    if (currentRoom.status === 'waiting') {
+      renderWaitingRoom(currentRoom);
+    } else {
+      updateGamePlayers();
+    }
   }
 });
 
 socket.on('player_left', (data) => {
   if (currentRoom) {
     currentRoom.players = currentRoom.players.filter(p => p.nickname !== data.nickname);
-    updateGamePlayers();
+    if (currentRoom.status === 'waiting') {
+      renderWaitingRoom(currentRoom);
+    } else {
+      updateGamePlayers();
+    }
   }
 });
 

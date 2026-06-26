@@ -48,13 +48,23 @@ function renderWaitingRoom(room) {
 }
 
 function startGame() {
-  if (!currentRoom) return;
+  console.log('点击开始游戏, currentRoom:', currentRoom);
+  if (!currentRoom) {
+    alert('房间信息不存在');
+    return;
+  }
   socket.emit('start_game', { roomId: currentRoom.id });
 }
 
 socket.on('game_started', (room) => {
-  currentRoom = room;
-  renderGame(room);
+  console.log('收到 game_started 事件:', room);
+  try {
+    currentRoom = room;
+    renderGame(room);
+    console.log('游戏界面渲染完成');
+  } catch (e) {
+    console.error('渲染游戏界面出错:', e);
+  }
 });
 
 function renderGame(room) {
