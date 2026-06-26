@@ -256,7 +256,7 @@ io.on('connection', (socket) => {
           login_days: user.login_days
         });
 
-        checkAchievements(user, 'login', loginDays);
+        await checkAchievements(user, 'login', loginDays);
       }
 
       socket.userId = user.id;
@@ -293,7 +293,7 @@ io.on('connection', (socket) => {
       
       // 检查状态相关成就
       if (updates.mood >= 90) {
-        checkAchievements(user, 'mood_high');
+        await checkAchievements(user, 'mood_high');
       }
     } catch (err) {
       console.error('更新状态错误:', err);
@@ -328,7 +328,7 @@ io.on('connection', (socket) => {
     socket.emit('user_data', user);
     socket.emit('purchase_success', { item: furniture, type: 'furniture' });
     
-    checkAchievements(user, 'shop');
+    await checkAchievements(user, 'shop');
   });
   
   socket.on('place_furniture', async ({ furnitureId, position }) => {
@@ -390,7 +390,7 @@ io.on('connection', (socket) => {
     socket.emit('user_data', user);
     socket.emit('purchase_success', { item: supply, type: 'petSupply' });
     
-    checkAchievements(user, 'shop');
+    await checkAchievements(user, 'shop');
   });
   
   // ========== 礼物系统 ==========
@@ -435,7 +435,7 @@ io.on('connection', (socket) => {
       });
     }
     
-    checkAchievements(sender, 'gift');
+    await checkAchievements(sender, 'gift');
   });
   
   // ========== 成就系统 ==========
@@ -450,7 +450,7 @@ io.on('connection', (socket) => {
     }
   });
   
-  function checkAchievements(user, type, count = 1) {
+  async function checkAchievements(user, type, count = 1) {
     let owned = JSON.parse(user.achievements || '[]');
     let newAchievements = [];
     
@@ -620,7 +620,7 @@ io.on('connection', (socket) => {
     socket.emit('user_data', user);
     socket.emit('pet_adopted', { coins: user.coins, pet: user.pet });
     
-    checkAchievements(user, 'pet_adopt');
+    await checkAchievements(user, 'pet_adopt');
   });
   
   socket.on('pet_action', async ({ action }) => {
@@ -704,7 +704,7 @@ io.on('connection', (socket) => {
       socket.emit('notification', { message });
     }
     
-    checkAchievements(user, 'pet_action', { action, level: pet.level });
+    await checkAchievements(user, 'pet_action', { action, level: pet.level });
   });
   
   socket.on('get_online_users', () => {
@@ -762,7 +762,7 @@ io.on('connection', (socket) => {
       authorAvatar: user.avatar
     });
     
-    checkAchievements(user, 'moment');
+    await checkAchievements(user, 'moment');
   });
   
   socket.on('like_moment', async ({ momentId }) => {
@@ -1189,7 +1189,7 @@ io.on('connection', (socket) => {
         if (result.allSame) {
           room.players.filter(p => !p.isRobot).forEach(async p => {
             let user = await getUserByNickname(p.nickname);
-            if (user) checkAchievements(user, 'tacit_perfect');
+            if (user) await checkAchievements(user, 'tacit_perfect');
           });
         }
       } else {
