@@ -770,6 +770,24 @@ io.on('connection', (socket) => {
     socket.emit('online_users', Array.from(onlineUsers.values()));
   });
 
+  socket.on('get_all_users', async () => {
+    const result = await db.query('SELECT id, nickname, avatar FROM users ORDER BY id DESC LIMIT 100');
+    const allUsers = result.rows;
+    const onlineNicknames = new Set(Array.from(onlineUsers.values()).map(u => u.nickname));
+    
+    const usersWithStatus = allUsers.map(u => ({
+      id: u.id,
+      nickname: u.nickname,
+      avatar: u.avatar,
+      isOnline: onlineNicknames.has(u.nickname)
+    })).filter(u => u.nickname !== socket.nickname);
+    
+    const onlineUsersList = usersWithStatus.filter(u => u.isOnline);
+    const offlineUsersList = usersWithStatus.filter(u => !u.isOnline);
+    
+    socket.emit('all_users', { online: onlineUsersList, offline: offlineUsersList });
+  });
+
   socket.on('poke', ({ targetNickname }) => {
     const targetUser = Array.from(onlineUsers.values()).find(u => u.nickname === targetNickname);
     if (targetUser) {
@@ -894,6 +912,14 @@ io.on('connection', (socket) => {
   });
 
   socket.on('send_message', async ({ content, toNickname }) => {
+    if (!socket.nickname) {
+      socket.emit('error', { message: '请先登录' });
+      return;
+    }
+    
+    content = (content || '').trim();
+    if (!content) return;
+    
     if (toNickname) {
       const targetUser = Array.from(onlineUsers.values()).find(u => u.nickname === toNickname);
       if (targetUser) {

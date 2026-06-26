@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 定期刷新在线用户列表
   setInterval(() => {
     if (currentUser) {
-      socket.emit('get_online_users');
+      socket.emit('get_all_users');
     }
   }, 5000);
 });
@@ -643,45 +643,64 @@ function loadOwnedFurniture() {
 }
 
 function refreshFriendsList() {
-  socket.emit('get_online_users');
+  socket.emit('get_all_users');
 }
 
-socket.on('online_users', (users) => {
-  onlineUsers = users;
+function renderFriendItem(u, isOnline) {
+  return `
+    <div class="friend-item ${isOnline ? '' : 'offline'}">
+      <div class="friend-avatar">
+        ${u.avatar}
+        ${isOnline ? '<span class="online-dot"></span>' : '<span class="offline-dot"></span>'}
+      </div>
+      <div class="friend-info">
+        <div class="name">${u.nickname}</div>
+        <div class="status">${isOnline ? '在线中' : '离线'}</div>
+        <div class="intimacy-status" id="intimacy-${u.nickname}">加载中...</div>
+      </div>
+      ${isOnline ? `<button class="visit-btn" onclick="visitFriendHouse('${u.nickname}')">串门</button>` : ''}
+      ${isOnline ? `<button class="poke-btn" onclick="pokeFriend('${u.nickname}')">戳一下</button>` : ''}
+      <button class="gift-btn" onclick="showGiftModal('${u.nickname}')">送礼物</button>
+    </div>
+  `;
+}
+
+socket.on('all_users', (data) => {
   const list = document.getElementById('friends-list');
   const countEl = document.getElementById('online-count');
+  const friendsCountEl = document.getElementById('friends-count');
+  
+  const allUsers = [...data.online, ...data.offline];
   
   if (countEl) {
-    countEl.textContent = users.length;
+    countEl.textContent = data.online.length;
+  }
+  if (friendsCountEl) {
+    friendsCountEl.textContent = `(在线 ${data.online.length} / 共 ${allUsers.length})`;
   }
   
   if (!list) return;
   
-  const otherUsers = users.filter(u => u.nickname !== currentUser?.nickname);
-  
-  if (otherUsers.length === 0) {
-    list.innerHTML = '<p class="empty-text">暂无在线闺蜜~</p>';
+  if (allUsers.length === 0) {
+    list.innerHTML = '<p class="empty-text">暂无闺蜜~</p>';
     return;
   }
   
-  list.innerHTML = otherUsers.map(u => `
-    <div class="friend-item">
-      <div class="friend-avatar">
-        ${u.avatar}
-        <span class="online-dot"></span>
-      </div>
-      <div class="friend-info">
-        <div class="name">${u.nickname}</div>
-        <div class="status">在线中</div>
-        <div class="intimacy-status" id="intimacy-${u.nickname}">加载中...</div>
-      </div>
-      <button class="visit-btn" onclick="visitFriendHouse('${u.nickname}')">串门</button>
-      <button class="poke-btn" onclick="pokeFriend('${u.nickname}')">戳一下</button>
-      <button class="gift-btn" onclick="showGiftModal('${u.nickname}')">送礼物</button>
-    </div>
-  `).join('');
+  let html = '';
   
-  otherUsers.forEach(u => {
+  if (data.online.length > 0) {
+    html += `<div class="friend-section-title">👭 在线闺蜜 (${data.online.length})</div>`;
+    html += data.online.map(u => renderFriendItem(u, true)).join('');
+  }
+  
+  if (data.offline.length > 0) {
+    html += `<div class="friend-section-title">💤 离线闺蜜 (${data.offline.length})</div>`;
+    html += data.offline.map(u => renderFriendItem(u, false)).join('');
+  }
+  
+  list.innerHTML = html;
+  
+  allUsers.forEach(u => {
     socket.emit('get_intimacy', { targetNickname: u.nickname });
   });
 });
@@ -895,7 +914,14 @@ function initChatInput() {
   const chatInput = document.getElementById('chat-input');
   if (chatInput) {
     chatInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') sendChatMessage();
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        sendChatMessage();
+      }
+    });
+    
+    chatInput.addEventListener('input', () => {
+      chatInput.dataset.value = chatInput.value;
     });
   }
   
@@ -904,23 +930,37 @@ function initChatInput() {
 
 function sendChatMessage() {
   const input = document.getElementById('chat-input');
+  if (!input) return;
+  
   const content = input.value.trim();
   if (!content) return;
   
+  if (!currentUser) {
+    showNotification('请先登录');
+    return;
+  }
+  
   socket.emit('send_message', { content });
+  
   input.value = '';
+  input.blur();
+  
+  try {
+    input.focus();
+  } catch (e) {}
 }
 
 socket.on('public_message', (msg) => {
   const chatBox = document.getElementById('chat-messages');
   if (!chatBox) return;
   
-  const isMine = msg.from === currentUser?.nickname;
+  const fromName = msg.from || '匿名用户';
+  const isMine = fromName === (currentUser?.nickname || '');
   const msgEl = document.createElement('div');
   msgEl.className = `chat-message ${isMine ? 'mine' : ''}`;
   msgEl.innerHTML = `
-    <div class="msg-from">${msg.from}</div>
-    <div class="msg-content">${escapeHtml(msg.content)}</div>
+    <div class="msg-from">${fromName}</div>
+    <div class="msg-content">${escapeHtml(msg.content || '')}</div>
   `;
   chatBox.appendChild(msgEl);
   chatBox.scrollTop = chatBox.scrollHeight;
@@ -930,13 +970,16 @@ socket.on('chat_history', (messages) => {
   const chatBox = document.getElementById('chat-messages');
   if (!chatBox) return;
   
+  chatBox.innerHTML = '';
+  
   messages.forEach(msg => {
-    const isMine = msg.from_user === currentUser?.nickname;
+    const fromName = msg.from_user || msg.from || '匿名用户';
+    const isMine = fromName === (currentUser?.nickname || '');
     const msgEl = document.createElement('div');
     msgEl.className = `chat-message ${isMine ? 'mine' : ''}`;
     msgEl.innerHTML = `
-      <div class="msg-from">${msg.from_user}</div>
-      <div class="msg-content">${escapeHtml(msg.content)}</div>
+      <div class="msg-from">${fromName}</div>
+      <div class="msg-content">${escapeHtml(msg.content || '')}</div>
     `;
     chatBox.appendChild(msgEl);
   });

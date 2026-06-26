@@ -220,14 +220,7 @@ socket.on('gift_received', (data) => {
 });
 
 function showGiftFriends(giftId) {
-  socket.emit('get_online_users');
-  
-  const otherUsers = Array.from(onlineUsers?.values() || []).filter(u => u.nickname !== currentUser?.nickname);
-  
-  if (otherUsers.length === 0) {
-    showNotification('暂无在线闺蜜可以送礼~');
-    return;
-  }
+  socket.emit('get_all_users');
   
   const modal = document.getElementById('gift-modal');
   const list = document.getElementById('gift-list');
@@ -235,15 +228,29 @@ function showGiftFriends(giftId) {
   
   if (!gift) return;
   
-  list.innerHTML = otherUsers.map(u => `
-    <div class="gift-friend-item">
-      <div class="gift-friend-avatar">${u.avatar}</div>
-      <div class="gift-friend-name">${u.nickname}</div>
-      <button class="btn btn-small btn-primary" onclick="sendGift('${u.nickname}', '${giftId}')">送出 ${gift.icon}</button>
-    </div>
-  `).join('');
-  
   modal.classList.add('active');
+  list.innerHTML = '<p class="empty-text">加载中...</p>';
+  
+  const handleAllUsers = (data) => {
+    const allUsers = [...data.online, ...data.offline];
+    if (allUsers.length === 0) {
+      list.innerHTML = '<p class="empty-text">暂无闺蜜可以送礼~</p>';
+      return;
+    }
+    
+    list.innerHTML = allUsers.map(u => `
+      <div class="gift-friend-item">
+        <div class="gift-friend-avatar">${u.avatar}</div>
+        <div class="gift-friend-name">${u.nickname}</div>
+        <div class="gift-friend-status" style="font-size: 0.7rem; color: ${u.isOnline ? '#4caf50' : '#999'};">
+          ${u.isOnline ? '在线' : '离线'}
+        </div>
+        <button class="btn btn-small btn-primary" onclick="sendGift('${u.nickname}', '${giftId}')">送出 ${gift.icon}</button>
+      </div>
+    `).join('');
+  };
+  
+  socket.once('all_users', handleAllUsers);
 }
 
 function sendGift(targetNickname, giftId) {

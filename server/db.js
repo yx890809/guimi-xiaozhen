@@ -196,6 +196,15 @@ function fileQuery(text, params) {
     return { rows: user ? [user] : [] };
   }
 
+  if (text.includes('SELECT id, nickname, avatar FROM users')) {
+    const users = userData.users.map(u => ({
+      id: u.id,
+      nickname: u.nickname,
+      avatar: u.avatar
+    }));
+    return { rows: users };
+  }
+
   if (text.includes('INSERT INTO users')) {
     const user = {
       id: userData.userIdCounter++,
