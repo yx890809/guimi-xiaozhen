@@ -3700,3 +3700,19 @@ body {
 .login-form input::placeholder {
   color: #ccc;
 }
+
+.remember-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.remember-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #e91e63;
+}

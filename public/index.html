@@ -21,6 +21,10 @@
           <h3 style="text-align: center; color: #e91e63; margin-bottom: 20px;">欢迎回来 💕</h3>
           <input type="text" id="login-nickname" placeholder="请输入你的真实姓名..." maxlength="10">
           <input type="password" id="login-password" placeholder="请输入密码..." maxlength="16">
+          <label class="remember-checkbox">
+            <input type="checkbox" id="remember-me">
+            <span>记住密码和账号</span>
+          </label>
           <button id="login-btn" class="btn btn-primary">登录小镇 🏠</button>
           <p style="text-align: center; margin-top: 15px; color: #888; font-size: 0.9rem;">
             还没有账号？
@@ -79,6 +83,7 @@
         </div>
         <button class="btn-icon" onclick="openShopModal()">🛒</button>
         <button class="btn-icon" onclick="openAchievementModal()">🏆</button>
+        <button class="btn-icon" onclick="logout()" title="退出登录">🚪</button>
       </header>
 
       <!-- 每日签到提示 -->

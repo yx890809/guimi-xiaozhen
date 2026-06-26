@@ -61,6 +61,36 @@ function initLoginPage() {
       });
     }
   });
+  
+  const savedNickname = localStorage.getItem('guimi_nickname');
+  const savedPassword = localStorage.getItem('guimi_password');
+  const loginPassword = document.getElementById('login-password');
+  const rememberMe = document.getElementById('remember-me');
+  
+  if (savedNickname && loginNickname) {
+    loginNickname.value = savedNickname;
+  }
+  if (savedPassword && loginPassword) {
+    loginPassword.value = savedPassword;
+    if (rememberMe) {
+      rememberMe.checked = true;
+    }
+  }
+}
+
+function logout() {
+  localStorage.removeItem('guimi_nickname');
+  localStorage.removeItem('guimi_password');
+  socket.emit('logout');
+  currentUser = null;
+  document.getElementById('main-page').classList.remove('active');
+  document.getElementById('login-page').classList.add('active');
+  document.getElementById('login-nickname').value = '';
+  document.getElementById('login-password').value = '';
+  const rememberMe = document.getElementById('remember-me');
+  if (rememberMe) {
+    rememberMe.checked = false;
+  }
 }
 
 function showRegisterForm() {
@@ -76,6 +106,7 @@ function showLoginForm() {
 function handleLogin() {
   const nickname = document.getElementById('login-nickname').value.trim();
   const password = document.getElementById('login-password').value;
+  const rememberMe = document.getElementById('remember-me')?.checked || false;
 
   if (!nickname) {
     showNotification('请输入姓名哦~');
@@ -94,7 +125,7 @@ function handleLogin() {
     return;
   }
 
-  socket.emit('login', { nickname, password });
+  socket.emit('login', { nickname, password, rememberMe });
 }
 
 function handleRegister() {
@@ -145,6 +176,12 @@ socket.on('register_success', (data) => {
 
 socket.on('user_data', (user) => {
   currentUser = user;
+  
+  if (user.rememberMe) {
+    localStorage.setItem('guimi_nickname', user.nickname);
+    localStorage.setItem('guimi_password', document.getElementById('login-password').value || '');
+  }
+  
   showMainPage();
   updateUserDisplay();
   updateStatusBars();
@@ -830,6 +867,8 @@ function initChatInput() {
       if (e.key === 'Enter') sendChatMessage();
     });
   }
+  
+  socket.emit('get_chat_history');
 }
 
 function sendChatMessage() {
@@ -853,6 +892,23 @@ socket.on('public_message', (msg) => {
     <div class="msg-content">${escapeHtml(msg.content)}</div>
   `;
   chatBox.appendChild(msgEl);
+  chatBox.scrollTop = chatBox.scrollHeight;
+});
+
+socket.on('chat_history', (messages) => {
+  const chatBox = document.getElementById('chat-messages');
+  if (!chatBox) return;
+  
+  messages.forEach(msg => {
+    const isMine = msg.from_user === currentUser?.nickname;
+    const msgEl = document.createElement('div');
+    msgEl.className = `chat-message ${isMine ? 'mine' : ''}`;
+    msgEl.innerHTML = `
+      <div class="msg-from">${msg.from_user}</div>
+      <div class="msg-content">${escapeHtml(msg.content)}</div>
+    `;
+    chatBox.appendChild(msgEl);
+  });
   chatBox.scrollTop = chatBox.scrollHeight;
 });
 

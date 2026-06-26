@@ -8,6 +8,7 @@ const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const FRIENDSHIPS_FILE = path.join(DATA_DIR, 'friendships.json');
 const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
 const MOMENTS_FILE = path.join(DATA_DIR, 'moments.json');
+const CHAT_MESSAGES_FILE = path.join(DATA_DIR, 'chat_messages.json');
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -61,6 +62,9 @@ async function initDB() {
     }
     if (!fs.existsSync(MOMENTS_FILE)) {
       writeJSONFile(MOMENTS_FILE, { moments: [], momentIdCounter: 1 });
+    }
+    if (!fs.existsSync(CHAT_MESSAGES_FILE)) {
+      writeJSONFile(CHAT_MESSAGES_FILE, { messages: [], messageIdCounter: 1 });
     }
     console.log('✅ 文件存储初始化完成');
     return;
@@ -131,6 +135,15 @@ async function initDB() {
         content TEXT NOT NULL,
         likes TEXT DEFAULT '[]',
         comments TEXT DEFAULT '[]',
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS chat_messages (
+        id SERIAL PRIMARY KEY,
+        from_user VARCHAR(50) NOT NULL,
+        content TEXT NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
@@ -376,6 +389,24 @@ function fileQuery(text, params) {
   if (text.includes('SELECT * FROM moments ORDER BY')) {
     const momentData = readJSONFile(MOMENTS_FILE, { moments: [], momentIdCounter: 1 });
     return { rows: momentData.moments.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) };
+  }
+
+  if (text.includes('INSERT INTO chat_messages')) {
+    const chatData = readJSONFile(CHAT_MESSAGES_FILE, { messages: [], messageIdCounter: 1 });
+    const message = {
+      id: chatData.messageIdCounter++,
+      from_user: params[0],
+      content: params[1],
+      created_at: new Date().toISOString()
+    };
+    chatData.messages.push(message);
+    writeJSONFile(CHAT_MESSAGES_FILE, chatData);
+    return { rows: [message] };
+  }
+
+  if (text.includes('SELECT * FROM chat_messages')) {
+    const chatData = readJSONFile(CHAT_MESSAGES_FILE, { messages: [], messageIdCounter: 1 });
+    return { rows: chatData.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) };
   }
 
   return { rows: [] };

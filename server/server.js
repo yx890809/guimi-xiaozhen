@@ -219,7 +219,7 @@ io.on('connection', (socket) => {
   });
 
   // 用户登录
-  socket.on('login', async ({ nickname, password }) => {
+  socket.on('login', async ({ nickname, password, rememberMe }) => {
     try {
       let user = await getUserByNickname(nickname);
       if (!user) {
@@ -250,8 +250,8 @@ io.on('connection', (socket) => {
           loginDays = 1;
         }
         coinsBonus = 10 + Math.min(loginDays * 5, 50);
-        user.coins = (user.coins || 0) + coinsBonus;
-        user.last_login = new Date();
+        user.coins += coinsBonus;
+        user.last_login = new Date().toISOString();
         user.login_days = loginDays;
 
         await updateUserStatus(user.id, {
@@ -276,7 +276,7 @@ io.on('connection', (socket) => {
       socket.join('lobby');
 
       io.to('lobby').emit('online_users', Array.from(onlineUsers.values()));
-      socket.emit('user_data', user);
+      socket.emit('user_data', { ...user, rememberMe });
 
       if (coinsBonus > 0) {
         socket.emit('daily_bonus', { days: loginDays, coins: coinsBonus });
@@ -838,7 +838,7 @@ io.on('connection', (socket) => {
     io.emit('moment_comment', { id: momentId, comment });
   });
 
-  socket.on('send_message', ({ content, toNickname }) => {
+  socket.on('send_message', async ({ content, toNickname }) => {
     if (toNickname) {
       const targetUser = Array.from(onlineUsers.values()).find(u => u.nickname === toNickname);
       if (targetUser) {
@@ -854,7 +854,21 @@ io.on('connection', (socket) => {
         content,
         timestamp: Date.now()
       });
+      
+      const user = await getUserByNickname(socket.nickname);
+      if (user) {
+        await db.query(
+          'INSERT INTO chat_messages (from_user, content) VALUES ($1, $2)',
+          [socket.nickname, content]
+        );
+      }
     }
+  });
+
+  socket.on('get_chat_history', async () => {
+    const result = await db.query('SELECT * FROM chat_messages ORDER BY created_at DESC LIMIT 500');
+    const messages = result.rows.reverse();
+    socket.emit('chat_history', messages);
   });
 
   socket.on('visit_house', async ({ hostNickname }) => {
@@ -1372,6 +1386,16 @@ io.on('connection', (socket) => {
     if (action === 'next') {
       nextTruthRound(room);
     }
+  });
+
+  socket.on('logout', () => {
+    console.log('用户退出:', socket.nickname);
+    if (socket.userId) {
+      onlineUsers.delete(socket.userId);
+      io.to('lobby').emit('online_users', Array.from(onlineUsers.values()));
+    }
+    socket.userId = null;
+    socket.nickname = null;
   });
 
   socket.on('disconnect', () => {
