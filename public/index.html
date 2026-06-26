@@ -65,7 +65,152 @@
 
         <!-- 制作信息 -->
         <div class="made-by">
-          <p>本游戏由杨肖制作 💖</p>
+          <p id="made-by-text" style="cursor: pointer; user-select: none;">本游戏由杨肖制作 💖</p>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 镇长登录模态框 -->
+    <div id="mayor-login-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>🏛️ 镇长专属通道</h2>
+          <button class="close-btn" onclick="closeMayorLoginModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p style="text-align: center; color: #666; margin-bottom: 20px;">请输入镇长密码 🔑</p>
+          <input type="password" id="mayor-password" placeholder="请输入镇长密码..." style="width: 100%; padding: 12px; border: 1px solid #e0e0e0; border-radius: 10px; font-size: 1rem; margin-bottom: 15px;">
+          <button class="btn btn-primary" style="width: 100%;" onclick="mayorLogin()">进入镇长办公室</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 镇长管理面板 -->
+    <div id="mayor-panel-modal" class="modal">
+      <div class="modal-content large-modal">
+        <div class="modal-header">
+          <h2>🏛️ 镇长办公室</h2>
+          <button class="close-btn" onclick="closeMayorPanel()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="mayor-tabs">
+            <button class="mayor-tab active" onclick="switchMayorTab('users')">👥 居民</button>
+            <button class="mayor-tab" onclick="switchMayorTab('broadcast')">📢 广播</button>
+            <button class="mayor-tab" onclick="switchMayorTab('stats')">📊 日报</button>
+            <button class="mayor-tab" onclick="switchMayorTab('surprise')">🎁 惊喜</button>
+            <button class="mayor-tab" onclick="switchMayorTab('reward')">🎀 奖励</button>
+          </div>
+          
+          <!-- 居民管理 -->
+          <div id="mayor-tab-users" class="mayor-tab-content active">
+            <div class="mayor-stats">
+              <div class="stat-card">
+                <div class="stat-icon">👥</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="total-users">0</div>
+                  <div class="stat-label">总居民数</div>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">🟢</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="online-users-count">0</div>
+                  <div class="stat-label">在线居民</div>
+                </div>
+              </div>
+            </div>
+            <div id="mayor-user-list" class="mayor-user-list">
+              <p class="empty-text">加载中...</p>
+            </div>
+          </div>
+          
+          <!-- 云端广播站 -->
+          <div id="mayor-tab-broadcast" class="mayor-tab-content">
+            <div class="broadcast-form">
+              <h4>📢 发布新广播</h4>
+              <input type="text" id="broadcast-title" placeholder="广播标题..." style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #e0e0e0; border-radius: 8px;">
+              <textarea id="broadcast-content" placeholder="广播内容..." rows="3" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #e0e0e0; border-radius: 8px; resize: none;"></textarea>
+              <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <input type="number" id="broadcast-days" placeholder="有效期(天)" value="7" min="1" max="30" style="width: 100px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                <button class="btn btn-primary" onclick="createBroadcast()">发布广播</button>
+              </div>
+            </div>
+            <h4 style="margin-top: 15px;">📋 历史广播</h4>
+            <div id="broadcast-list" class="mayor-user-list">
+              <p class="empty-text">暂无广播记录</p>
+            </div>
+          </div>
+          
+          <!-- 日报编辑部 -->
+          <div id="mayor-tab-stats" class="mayor-tab-content">
+            <div class="mayor-stats">
+              <div class="stat-card">
+                <div class="stat-icon">💬</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="today-messages">0</div>
+                  <div class="stat-label">今日消息</div>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">🎁</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="today-gifts">0</div>
+                  <div class="stat-label">今日送礼</div>
+                </div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-icon">📝</div>
+                <div class="stat-info">
+                  <div class="stat-value" id="today-moments">0</div>
+                  <div class="stat-label">今日日志</div>
+                </div>
+              </div>
+            </div>
+            <div class="stat-detail">
+              <p>📊 数据更新时间：<span id="stats-time">-</span></p>
+              <button class="btn btn-secondary" onclick="refreshStats()">🔄 刷新数据</button>
+            </div>
+          </div>
+          
+          <!-- 惊喜制造机 -->
+          <div id="mayor-tab-surprise" class="mayor-tab-content">
+            <div class="surprise-form">
+              <h4>🎁 设置今日惊喜</h4>
+              <p style="color: #888; font-size: 0.85rem; margin-bottom: 15px;">每天只能设置一件绝版商品，限时24小时！</p>
+              <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="surprise-icon" placeholder="图标" value="🎁" style="width: 60px; padding: 10px; text-align: center; border: 1px solid #e0e0e0; border-radius: 8px;">
+                <input type="text" id="surprise-name" placeholder="商品名称" style="flex: 1; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px;">
+              </div>
+              <input type="text" id="surprise-desc" placeholder="商品描述" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #e0e0e0; border-radius: 8px;">
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="number" id="surprise-price" placeholder="价格" value="99" min="1" style="width: 100px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                <span>💰 金币</span>
+                <button class="btn btn-primary" onclick="setSurprise()" style="margin-left: auto;">✨ 设置惊喜</button>
+              </div>
+            </div>
+            <div id="current-surprise" class="current-surprise" style="display: none; margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #fff8e1, #ffecb3); border-radius: 12px;">
+              <h4>🎉 当前惊喜</h4>
+              <p id="surprise-status"></p>
+            </div>
+          </div>
+          
+          <!-- 奖励发放 -->
+          <div id="mayor-tab-reward" class="mayor-tab-content">
+            <div class="reward-form">
+              <h4>🎀 发放奖励</h4>
+              <input type="text" id="reward-user" placeholder="获奖用户昵称" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #e0e0e0; border-radius: 8px;">
+              <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="reward-icon" placeholder="图标" value="🏆" style="width: 60px; padding: 10px; text-align: center; border: 1px solid #e0e0e0; border-radius: 8px;">
+                <input type="text" id="reward-name" placeholder="奖励名称" style="flex: 1; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px;">
+              </div>
+              <input type="text" id="reward-message" placeholder="附言（可选）" style="width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #e0e0e0; border-radius: 8px;">
+              <div style="display: flex; gap: 10px; align-items: center;">
+                <input type="number" id="reward-coins" placeholder="金币" value="100" min="0" style="width: 120px; padding: 10px; border: 1px solid #e0e0e0; border-radius: 8px;">
+                <span>💰 金币奖励</span>
+                <button class="btn btn-primary" onclick="sendReward()" style="margin-left: auto;">🎁 发送奖励</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -83,6 +228,7 @@
         </div>
         <button class="btn-icon" onclick="openShopModal()">🛒</button>
         <button class="btn-icon" onclick="openAchievementModal()">🏆</button>
+        <button id="mayor-btn" class="btn-icon mayor-btn" onclick="openMayorPanel()" style="display: none;" title="镇长办公室">🏛️</button>
         <button class="btn-icon" onclick="logout()" title="退出登录">🚪</button>
       </header>
 

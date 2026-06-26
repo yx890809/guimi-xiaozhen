@@ -766,6 +766,207 @@ io.on('connection', (socket) => {
     await checkAchievements(user, 'pet_action', { action, level: pet.level });
   });
   
+  // ========== 镇长系统 ==========
+  
+  const MAYOR_PASSWORD = 'yxiao0809';
+  const mayorSockets = new Set();
+  
+  socket.on('mayor_login', ({ password }) => {
+    if (password === MAYOR_PASSWORD) {
+      mayorSockets.add(socket.id);
+      socket.emit('mayor_login_success');
+      console.log('镇长登录:', socket.id);
+    } else {
+      socket.emit('mayor_login_failed');
+    }
+  });
+  
+  socket.on('mayor_get_users', async () => {
+    if (!mayorSockets.has(socket.id)) {
+      socket.emit('error', { message: '无权限' });
+      return;
+    }
+    
+    const result = await db.query('SELECT id, nickname, avatar, coins, register_date, last_login FROM users ORDER BY id DESC');
+    const onlineNicknames = new Set(Array.from(onlineUsers.values()).map(u => u.nickname));
+    
+    const users = result.rows.map(u => ({
+      id: u.id,
+      nickname: u.nickname,
+      avatar: u.avatar,
+      coins: u.coins,
+      registerDate: u.register_date ? new Date(u.register_date).toLocaleDateString('zh-CN') : '未知',
+      isOnline: onlineNicknames.has(u.nickname)
+    }));
+    
+    socket.emit('mayor_users', {
+      total: users.length,
+      onlineCount: users.filter(u => u.isOnline).length,
+      users
+    });
+  });
+  
+  socket.on('mayor_delete_user', async ({ nickname }) => {
+    if (!mayorSockets.has(socket.id)) {
+      socket.emit('error', { message: '无权限' });
+      return;
+    }
+    
+    const user = await getUserByNickname(nickname);
+    if (!user) {
+      socket.emit('error', { message: '用户不存在' });
+      return;
+    }
+    
+    await db.query('DELETE FROM users WHERE nickname = $1', [nickname]);
+    
+    const targetUser = Array.from(onlineUsers.values()).find(u => u.nickname === nickname);
+    if (targetUser) {
+      io.to(targetUser.socketId).emit('kicked', { message: '你已被镇长移出小镇' });
+      onlineUsers.delete(user.id);
+      io.to('lobby').emit('online_users', Array.from(onlineUsers.values()));
+    }
+    
+    socket.emit('mayor_user_deleted', { nickname });
+    console.log(`镇长删除用户: ${nickname}`);
+  });
+  
+  // 云端广播站
+  socket.on('mayor_create_announcement', async ({ title, content, expiresDays }) => {
+    if (!mayorSockets.has(socket.id)) {
+      socket.emit('error', { message: '无权限' });
+      return;
+    }
+    
+    const expiresAt = expiresDays > 0 ? new Date(Date.now() + expiresDays * 86400000).toISOString() : null;
+    await db.query(
+      'INSERT INTO announcements (title, content, expires_at) VALUES ($1, $2, $3)',
+      [title, content, expiresAt]
+    );
+    
+    socket.emit('mayor_announcement_created', { message: '广播发布成功！' });
+    io.emit('new_announcement', { title, content, created_at: new Date().toISOString() });
+  });
+  
+  socket.on('mayor_get_announcements', async () => {
+    if (!mayorSockets.has(socket.id)) return;
+    
+    const result = await db.query('SELECT * FROM announcements ORDER BY created_at DESC LIMIT 50');
+    socket.emit('mayor_announcements', result.rows);
+  });
+  
+  socket.on('mayor_delete_announcement', async ({ id }) => {
+    if (!mayorSockets.has(socket.id)) return;
+    await db.query('DELETE FROM announcements WHERE id = $1', [id]);
+    socket.emit('mayor_announcement_deleted', { id });
+  });
+  
+  // 日报编辑部
+  socket.on('mayor_get_stats', async ({ date }) => {
+    if (!mayorSockets.has(socket.id)) return;
+    
+    const stats = {
+      totalUsers: 0,
+      onlineUsers: onlineUsers.size,
+      todayActive: 0,
+      totalMessages: 0,
+      totalGifts: 0,
+      totalMoments: 0,
+      recentActivity: []
+    };
+    
+    const usersResult = await db.query('SELECT COUNT(*) as count FROM users');
+    stats.totalUsers = parseInt(usersResult.rows[0]?.count || 0);
+    
+    const messagesResult = await db.query(
+      "SELECT COUNT(*) as count FROM chat_messages WHERE created_at >= CURRENT_DATE"
+    );
+    stats.todayMessages = parseInt(messagesResult.rows[0]?.count || 0);
+    
+    const giftsResult = await db.query(
+      "SELECT COUNT(*) as count FROM gift_records WHERE created_at >= CURRENT_DATE"
+    );
+    stats.todayGifts = parseInt(giftsResult.rows[0]?.count || 0);
+    
+    const momentsResult = await db.query(
+      "SELECT COUNT(*) as count FROM moments WHERE created_at >= CURRENT_DATE"
+    );
+    stats.todayMoments = parseInt(momentsResult.rows[0]?.count || 0);
+    
+    socket.emit('mayor_stats', stats);
+  });
+  
+  // 惊喜制造机
+  socket.on('mayor_set_surprise', async ({ name, icon, description, price }) => {
+    if (!mayorSockets.has(socket.id)) return;
+    
+    await db.query('DELETE FROM daily_surprise');
+    await db.query(
+      'INSERT INTO daily_surprise (name, icon, description, price) VALUES ($1, $2, $3, $4)',
+      [name, icon, description, price]
+    );
+    
+    socket.emit('mayor_surprise_set', { message: '惊喜已设置！' });
+    io.emit('new_surprise', { name, icon, description, price });
+  });
+  
+  socket.on('get_daily_surprise', async () => {
+    const result = await db.query('SELECT * FROM daily_surprise WHERE is_active = true');
+    if (result.rows.length > 0) {
+      socket.emit('daily_surprise', result.rows[0]);
+    }
+  });
+  
+  // 镇长奖励
+  socket.on('mayor_send_reward', async ({ toUser, rewardType, rewardName, rewardIcon, coins, message }) => {
+    if (!mayorSockets.has(socket.id)) return;
+    
+    await db.query(
+      'INSERT INTO mayor_rewards (to_user, reward_type, reward_name, reward_icon, coins, message) VALUES ($1, $2, $3, $4, $5, $6)',
+      [toUser, rewardType, rewardName, rewardIcon, coins || 0, message || null]
+    );
+    
+    const targetUser = Array.from(onlineUsers.values()).find(u => u.nickname === toUser);
+    if (targetUser) {
+      io.to(targetUser.socketId).emit('mayor_reward_received', {
+        rewardType, rewardName, rewardIcon, coins, message
+      });
+    }
+    
+    socket.emit('mayor_reward_sent', { message: `奖励已发送给 ${toUser}！` });
+  });
+  
+  socket.on('get_mayor_rewards', async () => {
+    if (!socket.nickname) return;
+    const result = await db.query('SELECT * FROM mayor_rewards WHERE to_user = $1', [socket.nickname]);
+    socket.emit('mayor_rewards', result.rows);
+  });
+  
+  socket.on('claim_mayor_reward', async ({ rewardId }) => {
+    if (!socket.nickname) return;
+    
+    const result = await db.query(
+      'SELECT * FROM mayor_rewards WHERE id = $1 AND to_user = $2',
+      [rewardId, socket.nickname]
+    );
+    
+    if (result.rows.length > 0) {
+      const reward = result.rows[0];
+      
+      if (reward.coins > 0) {
+        const user = await getUserByNickname(socket.nickname);
+        if (user) {
+          user.coins += reward.coins;
+          await updateUserStatus(user.id, { coins: user.coins });
+          socket.emit('user_data', user);
+        }
+      }
+      
+      await db.query('UPDATE mayor_rewards SET claimed = true WHERE id = $1', [rewardId]);
+      socket.emit('reward_claimed', { rewardId });
+    }
+  });
+  
   socket.on('get_online_users', () => {
     socket.emit('online_users', Array.from(onlineUsers.values()));
   });

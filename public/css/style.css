@@ -4036,3 +4036,236 @@ body {
   height: 18px;
   accent-color: #e91e63;
 }
+
+/* ��ϵͳ */
+.mayor-btn {
+  animation: mayor-glow 2s ease-in-out infinite;
+}
+
+@keyframes mayor-glow {
+  0%, 100% { filter: drop-shadow(0 0 2px #ffd700); }
+  50% { filter: drop-shadow(0 0 8px #ffd700); }
+}
+
+.mayor-stats {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.stat-card {
+  flex: 1;
+  background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%);
+  border-radius: 12px;
+  padding: 15px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.stat-icon {
+  font-size: 2rem;
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #f57c00;
+}
+
+.stat-label {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 2px;
+}
+
+.mayor-user-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.mayor-user-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.mayor-user-avatar {
+  font-size: 2rem;
+  width: 50px;
+  text-align: center;
+}
+
+.mayor-user-info {
+  flex: 1;
+}
+
+.mayor-user-name {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.online-tag, .offline-tag {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-left: 8px;
+  font-weight: 500;
+}
+
+.online-tag {
+  background: #e8f5e9;
+  color: #4caf50;
+}
+
+.offline-tag {
+  background: #f5f5f5;
+  color: #999;
+}
+
+.mayor-user-detail {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 4px;
+}
+
+.btn-danger {
+  background: #f44336;
+  color: white;
+  border: none;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: all 0.3s;
+}
+
+.btn-danger:hover {
+  background: #d32f2f;
+  transform: translateY(-1px);
+}
+
+.btn-small.btn-danger {
+  padding: 4px 12px;
+  font-size: 0.75rem;
+}
+
+/* 镇长标签页样式 */
+.mayor-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 15px;
+  overflow-x: auto;
+  padding-bottom: 5px;
+}
+
+.mayor-tab {
+  padding: 8px 12px;
+  border: none;
+  background: #f5f5f5;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #666;
+  white-space: nowrap;
+  transition: all 0.3s;
+}
+
+.mayor-tab.active {
+  background: linear-gradient(135deg, #ffd700, #ffb300);
+  color: #333;
+  font-weight: 600;
+}
+
+.mayor-tab-content {
+  display: none;
+}
+
+.mayor-tab-content.active {
+  display: block;
+}
+
+.broadcast-form, .surprise-form, .reward-form {
+  background: #fafafa;
+  padding: 15px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+}
+
+.broadcast-form h4, .surprise-form h4, .reward-form h4 {
+  margin-bottom: 12px;
+  color: #333;
+}
+
+.stat-detail {
+  background: #fafafa;
+  padding: 15px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.stat-detail p {
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.btn-secondary {
+  background: #f5f5f5;
+  color: #666;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.3s;
+}
+
+.btn-secondary:hover {
+  background: #e0e0e0;
+}
+
+.broadcast-item {
+  background: #fafafa;
+  padding: 12px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  border-left: 4px solid #e91e63;
+}
+
+.broadcast-item .broadcast-title {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.broadcast-item .broadcast-content {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 4px;
+}
+
+.broadcast-item .broadcast-time {
+  font-size: 0.75rem;
+  color: #999;
+}
+
+.broadcast-item .delete-btn {
+  background: none;
+  border: none;
+  color: #f44336;
+  cursor: pointer;
+  font-size: 0.8rem;
+  float: right;
+}
+
+

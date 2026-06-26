@@ -1001,6 +1001,261 @@ function showNotification(text) {
   }, 2000);
 }
 
+// 镇长功能
+let isMayor = false;
+let mayorClickCount = 0;
+let mayorClickTimer = null;
+
+document.addEventListener('DOMContentLoaded', () => {
+  const madeByText = document.getElementById('made-by-text');
+  if (madeByText) {
+    madeByText.addEventListener('click', () => {
+      mayorClickCount++;
+      
+      if (mayorClickTimer) clearTimeout(mayorClickTimer);
+      
+      mayorClickTimer = setTimeout(() => {
+        mayorClickCount = 0;
+      }, 2000);
+      
+      if (mayorClickCount >= 3) {
+        mayorClickCount = 0;
+        document.getElementById('mayor-login-modal').classList.add('active');
+      }
+    });
+  }
+});
+
+function closeMayorLoginModal() {
+  document.getElementById('mayor-login-modal').classList.remove('active');
+  document.getElementById('mayor-password').value = '';
+}
+
+function mayorLogin() {
+  const password = document.getElementById('mayor-password').value;
+  if (!password) {
+    showNotification('请输入镇长密码');
+    return;
+  }
+  socket.emit('mayor_login', { password });
+}
+
+socket.on('mayor_login_success', () => {
+  isMayor = true;
+  closeMayorLoginModal();
+  document.getElementById('mayor-btn').style.display = 'block';
+  showNotification('🏛️ 欢迎镇长回来！');
+  localStorage.setItem('mayor_logged_in', 'true');
+});
+
+socket.on('mayor_login_failed', () => {
+  showNotification('密码错误！');
+});
+
+function openMayorPanel() {
+  if (!isMayor) return;
+  document.getElementById('mayor-panel-modal').classList.add('active');
+  socket.emit('mayor_get_users');
+  socket.emit('mayor_get_announcements');
+  socket.emit('mayor_get_stats');
+  socket.emit('get_daily_surprise');
+}
+
+function closeMayorPanel() {
+  document.getElementById('mayor-panel-modal').classList.remove('active');
+}
+
+function switchMayorTab(tabName) {
+  document.querySelectorAll('.mayor-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.mayor-tab-content').forEach(c => c.classList.remove('active'));
+  
+  event.target.classList.add('active');
+  document.getElementById('mayor-tab-' + tabName)?.classList.add('active');
+  
+  if (tabName === 'users') {
+    socket.emit('mayor_get_users');
+  } else if (tabName === 'broadcast') {
+    socket.emit('mayor_get_announcements');
+  } else if (tabName === 'stats') {
+    refreshStats();
+  }
+}
+
+// 广播站
+function createBroadcast() {
+  const title = document.getElementById('broadcast-title').value.trim();
+  const content = document.getElementById('broadcast-content').value.trim();
+  const days = parseInt(document.getElementById('broadcast-days').value) || 7;
+  
+  if (!title || !content) {
+    showNotification('请填写标题和内容');
+    return;
+  }
+  
+  socket.emit('mayor_create_announcement', { title, content, expiresDays: days });
+}
+
+socket.on('mayor_announcements', (announcements) => {
+  const list = document.getElementById('broadcast-list');
+  if (!list) return;
+  
+  if (announcements.length === 0) {
+    list.innerHTML = '<p class="empty-text">暂无广播记录</p>';
+    return;
+  }
+  
+  list.innerHTML = announcements.map(a => `
+    <div class="broadcast-item">
+      <button class="delete-btn" onclick="deleteBroadcast(${a.id})">删除</button>
+      <div class="broadcast-title">${a.title}</div>
+      <div class="broadcast-content">${a.content}</div>
+      <div class="broadcast-time">${new Date(a.created_at).toLocaleString('zh-CN')}</div>
+    </div>
+  `).join('');
+});
+
+socket.on('mayor_announcement_created', () => {
+  showNotification('广播发布成功！');
+  document.getElementById('broadcast-title').value = '';
+  document.getElementById('broadcast-content').value = '';
+  socket.emit('mayor_get_announcements');
+});
+
+function deleteBroadcast(id) {
+  if (!confirm('确定删除此广播？')) return;
+  socket.emit('mayor_delete_announcement', { id });
+}
+
+socket.on('mayor_announcement_deleted', () => {
+  showNotification('广播已删除');
+  socket.emit('mayor_get_announcements');
+});
+
+// 日报编辑部
+function refreshStats() {
+  socket.emit('mayor_get_stats', { date: new Date().toISOString().split('T')[0] });
+}
+
+socket.on('mayor_stats', (stats) => {
+  document.getElementById('today-messages').textContent = stats.todayMessages || 0;
+  document.getElementById('today-gifts').textContent = stats.todayGifts || 0;
+  document.getElementById('today-moments').textContent = stats.todayMoments || 0;
+  document.getElementById('stats-time').textContent = new Date().toLocaleTimeString('zh-CN');
+});
+
+// 惊喜制造机
+function setSurprise() {
+  const icon = document.getElementById('surprise-icon').value.trim() || '🎁';
+  const name = document.getElementById('surprise-name').value.trim();
+  const description = document.getElementById('surprise-desc').value.trim();
+  const price = parseInt(document.getElementById('surprise-price').value) || 99;
+  
+  if (!name) {
+    showNotification('请填写商品名称');
+    return;
+  }
+  
+  socket.emit('mayor_set_surprise', { name, icon, description, price });
+}
+
+socket.on('mayor_surprise_set', () => {
+  showNotification('惊喜已设置！');
+  socket.emit('get_daily_surprise');
+});
+
+socket.on('daily_surprise', (surprise) => {
+  const container = document.getElementById('current-surprise');
+  const status = document.getElementById('surprise-status');
+  
+  if (surprise && surprise.is_active) {
+    container.style.display = 'block';
+    const endTime = new Date(surprise.end_time);
+    const now = new Date();
+    const hoursLeft = Math.max(0, Math.floor((endTime - now) / 3600000));
+    const minsLeft = Math.max(0, Math.floor(((endTime - now) % 3600000) / 60000));
+    
+    status.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 2rem;">${surprise.icon}</span>
+        <div>
+          <div style="font-weight: 600;">${surprise.name}</div>
+          <div style="color: #666; font-size: 0.85rem;">${surprise.description || '绝版商品，限时特惠！'}</div>
+          <div style="color: #f44336; font-size: 0.9rem;">💰 ${surprise.price} 金币 | ⏰ 剩余 ${hoursLeft}小时${minsLeft}分钟</div>
+        </div>
+      </div>
+    `;
+  } else {
+    container.style.display = 'none';
+  }
+});
+
+// 镇长奖励
+function sendReward() {
+  const toUser = document.getElementById('reward-user').value.trim();
+  const rewardIcon = document.getElementById('reward-icon').value.trim() || '🏆';
+  const rewardName = document.getElementById('reward-name').value.trim();
+  const coins = parseInt(document.getElementById('reward-coins').value) || 0;
+  const message = document.getElementById('reward-message').value.trim();
+  
+  if (!toUser || !rewardName) {
+    showNotification('请填写用户昵称和奖励名称');
+    return;
+  }
+  
+  socket.emit('mayor_send_reward', {
+    toUser, rewardType: 'special', rewardName, rewardIcon, coins, message
+  });
+}
+
+socket.on('mayor_reward_sent', ({ message }) => {
+  showNotification(message);
+  document.getElementById('reward-user').value = '';
+  document.getElementById('reward-name').value = '';
+  document.getElementById('reward-message').value = '';
+});
+
+socket.on('mayor_reward_received', (data) => {
+  showNotification(`🎉 收到镇长奖励：${data.rewardIcon} ${data.rewardName}！`);
+  if (data.message) {
+    showNotification(`💌 ${data.message}`);
+  }
+});
+
+socket.on('mayor_users', (data) => {
+  document.getElementById('total-users').textContent = data.total;
+  document.getElementById('online-users-count').textContent = data.onlineCount;
+  
+  const list = document.getElementById('mayor-user-list');
+  if (data.users.length === 0) {
+    list.innerHTML = '<p class="empty-text">暂无居民~</p>';
+    return;
+  }
+  
+  list.innerHTML = data.users.map(u => `
+    <div class="mayor-user-item">
+      <div class="mayor-user-avatar">${u.avatar}</div>
+      <div class="mayor-user-info">
+        <div class="mayor-user-name">
+          ${u.nickname}
+          ${u.isOnline ? '<span class="online-tag">在线</span>' : '<span class="offline-tag">离线</span>'}
+        </div>
+        <div class="mayor-user-detail">💰 ${u.coins} 金币 · 注册于 ${u.registerDate || '未知'}</div>
+      </div>
+      <button class="btn btn-small btn-danger" onclick="deleteUser('${u.nickname}')">删除</button>
+    </div>
+  `).join('');
+});
+
+function deleteUser(nickname) {
+  if (!confirm(`确定要删除居民「${nickname}」吗？此操作不可恢复！`)) return;
+  socket.emit('mayor_delete_user', { nickname });
+}
+
+socket.on('mayor_user_deleted', ({ nickname }) => {
+  showNotification(`已删除居民「${nickname}」`);
+  socket.emit('mayor_get_users');
+});
+
 // 日记功能
 function openDiaryModal() {
   document.getElementById('diary-modal').classList.add('active');

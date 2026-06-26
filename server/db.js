@@ -10,6 +10,10 @@ const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
 const MOMENTS_FILE = path.join(DATA_DIR, 'moments.json');
 const CHAT_MESSAGES_FILE = path.join(DATA_DIR, 'chat_messages.json');
 const GIFT_RECORDS_FILE = path.join(DATA_DIR, 'gift_records.json');
+const ANNOUNCEMENTS_FILE = path.join(DATA_DIR, 'announcements.json');
+const DAILY_SURPRISE_FILE = path.join(DATA_DIR, 'daily_surprise.json');
+const MAYOR_REWARDS_FILE = path.join(DATA_DIR, 'mayor_rewards.json');
+const ACTIVITY_STATS_FILE = path.join(DATA_DIR, 'activity_stats.json');
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -69,6 +73,18 @@ async function initDB() {
     }
     if (!fs.existsSync(GIFT_RECORDS_FILE)) {
       writeJSONFile(GIFT_RECORDS_FILE, { records: [], recordIdCounter: 1 });
+    }
+    if (!fs.existsSync(ANNOUNCEMENTS_FILE)) {
+      writeJSONFile(ANNOUNCEMENTS_FILE, { announcements: [], idCounter: 1 });
+    }
+    if (!fs.existsSync(DAILY_SURPRISE_FILE)) {
+      writeJSONFile(DAILY_SURPRISE_FILE, { surprise: null });
+    }
+    if (!fs.existsSync(MAYOR_REWARDS_FILE)) {
+      writeJSONFile(MAYOR_REWARDS_FILE, { rewards: [], idCounter: 1 });
+    }
+    if (!fs.existsSync(ACTIVITY_STATS_FILE)) {
+      writeJSONFile(ACTIVITY_STATS_FILE, { stats: [], idCounter: 1 });
     }
     console.log('✅ 文件存储初始化完成');
     return;
@@ -166,6 +182,54 @@ async function initDB() {
       )
     `);
 
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS announcements (
+        id SERIAL PRIMARY KEY,
+        title VARCHAR(100) NOT NULL,
+        content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW(),
+        expires_at TIMESTAMP
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS daily_surprise (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        icon VARCHAR(10) NOT NULL,
+        description TEXT,
+        price INT NOT NULL,
+        start_time TIMESTAMP DEFAULT NOW(),
+        end_time TIMESTAMP,
+        is_active BOOLEAN DEFAULT true
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS mayor_rewards (
+        id SERIAL PRIMARY KEY,
+        to_user VARCHAR(50) NOT NULL,
+        reward_type VARCHAR(20) NOT NULL,
+        reward_name VARCHAR(100) NOT NULL,
+        reward_icon VARCHAR(10) NOT NULL,
+        coins INT DEFAULT 0,
+        message TEXT,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS activity_stats (
+        id SERIAL PRIMARY KEY,
+        stat_date DATE NOT NULL,
+        active_users INT DEFAULT 0,
+        messages_count INT DEFAULT 0,
+        gifts_count INT DEFAULT 0,
+        moments_count INT DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
     console.log('✅ 数据库初始化完成');
   } catch (err) {
     console.error('数据库初始化失败:', err);
@@ -203,6 +267,29 @@ function fileQuery(text, params) {
       avatar: u.avatar
     }));
     return { rows: users };
+  }
+
+  if (text.includes('SELECT id, nickname, avatar, coins, register_date, last_login FROM users')) {
+    const users = userData.users.map(u => ({
+      id: u.id,
+      nickname: u.nickname,
+      avatar: u.avatar,
+      coins: u.coins || 0,
+      register_date: u.register_date || new Date().toISOString(),
+      last_login: u.last_login || null
+    }));
+    return { rows: users };
+  }
+
+  if (text.includes('DELETE FROM users WHERE')) {
+    const nickname = params[0];
+    const index = userData.users.findIndex(u => u.nickname === nickname);
+    if (index > -1) {
+      const deleted = userData.users.splice(index, 1)[0];
+      writeJSONFile(USERS_FILE, userData);
+      return { rows: [deleted] };
+    }
+    return { rows: [] };
   }
 
   if (text.includes('INSERT INTO users')) {
@@ -457,6 +544,103 @@ function fileQuery(text, params) {
   if (text.includes('SELECT * FROM gift_records') && text.includes('ORDER BY')) {
     const giftData = readJSONFile(GIFT_RECORDS_FILE, { records: [], recordIdCounter: 1 });
     return { rows: giftData.records.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) };
+  }
+
+  // 广播消息
+  if (text.includes('SELECT * FROM announcements ORDER BY')) {
+    const data = readJSONFile(ANNOUNCEMENTS_FILE, { announcements: [], idCounter: 1 });
+    return { rows: data.announcements.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) };
+  }
+
+  if (text.includes('INSERT INTO announcements')) {
+    const data = readJSONFile(ANNOUNCEMENTS_FILE, { announcements: [], idCounter: 1 });
+    const announcement = {
+      id: data.idCounter++,
+      title: params[0],
+      content: params[1],
+      created_at: new Date().toISOString(),
+      expires_at: params[2] || null
+    };
+    data.announcements.push(announcement);
+    writeJSONFile(ANNOUNCEMENTS_FILE, data);
+    return { rows: [announcement] };
+  }
+
+  if (text.includes('DELETE FROM announcements WHERE')) {
+    const data = readJSONFile(ANNOUNCEMENTS_FILE, { announcements: [], idCounter: 1 });
+    const id = parseInt(params[0]);
+    const index = data.announcements.findIndex(a => a.id === id);
+    if (index > -1) {
+      const deleted = data.announcements.splice(index, 1)[0];
+      writeJSONFile(ANNOUNCEMENTS_FILE, data);
+      return { rows: [deleted] };
+    }
+    return { rows: [] };
+  }
+
+  // 每日惊喜
+  if (text.includes('SELECT * FROM daily_surprise WHERE is_active = true')) {
+    const data = readJSONFile(DAILY_SURPRISE_FILE, { surprise: null });
+    return { rows: data.surprise ? [data.surprise] : [] };
+  }
+
+  if (text.includes('DELETE FROM daily_surprise')) {
+    const data = readJSONFile(DAILY_SURPRISE_FILE, { surprise: null });
+    const surprise = data.surprise;
+    data.surprise = null;
+    writeJSONFile(DAILY_SURPRISE_FILE, data);
+    return { rows: surprise ? [surprise] : [] };
+  }
+
+  if (text.includes('INSERT INTO daily_surprise')) {
+    const data = readJSONFile(DAILY_SURPRISE_FILE, { surprise: null });
+    const endTime = new Date();
+    endTime.setHours(endTime.getHours() + 24);
+    data.surprise = {
+      id: 1,
+      name: params[0],
+      icon: params[1],
+      description: params[2],
+      price: params[3],
+      start_time: new Date().toISOString(),
+      end_time: endTime.toISOString(),
+      is_active: true
+    };
+    writeJSONFile(DAILY_SURPRISE_FILE, data);
+    return { rows: [data.surprise] };
+  }
+
+  // 镇长奖励
+  if (text.includes('SELECT * FROM mayor_rewards WHERE to_user = $1')) {
+    const data = readJSONFile(MAYOR_REWARDS_FILE, { rewards: [], idCounter: 1 });
+    return { rows: data.rewards.filter(r => r.to_user === params[0]) };
+  }
+
+  if (text.includes('INSERT INTO mayor_rewards')) {
+    const data = readJSONFile(MAYOR_REWARDS_FILE, { rewards: [], idCounter: 1 });
+    const reward = {
+      id: data.idCounter++,
+      to_user: params[0],
+      reward_type: params[1],
+      reward_name: params[2],
+      reward_icon: params[3],
+      coins: params[4] || 0,
+      message: params[5] || null,
+      created_at: new Date().toISOString()
+    };
+    data.rewards.push(reward);
+    writeJSONFile(MAYOR_REWARDS_FILE, data);
+    return { rows: [reward] };
+  }
+
+  if (text.includes('UPDATE mayor_rewards SET')) {
+    const data = readJSONFile(MAYOR_REWARDS_FILE, { rewards: [], idCounter: 1 });
+    const reward = data.rewards.find(r => r.id === parseInt(params[0]));
+    if (reward) {
+      reward.claimed = true;
+      writeJSONFile(MAYOR_REWARDS_FILE, data);
+    }
+    return { rows: reward ? [reward] : [] };
   }
 
   return { rows: [] };
