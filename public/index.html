@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>🏠 闺蜜小镇</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 登录页面 -->
+    <div id="login-page" class="page active">
+      <div class="login-container">
+        <div class="login-header">
+          <h1>🏠 闺蜜小镇</h1>
+          <p>和闺蜜一起的欢乐时光 ✨</p>
+        </div>
+
+        <!-- 登录表单 -->
+        <div class="login-form" id="login-form-box">
+          <h3 style="text-align: center; color: #e91e63; margin-bottom: 20px;">欢迎回来 💕</h3>
+          <input type="text" id="login-nickname" placeholder="请输入你的真实姓名..." maxlength="10">
+          <input type="password" id="login-password" placeholder="请输入密码..." maxlength="16">
+          <button id="login-btn" class="btn btn-primary">登录小镇 🏠</button>
+          <p style="text-align: center; margin-top: 15px; color: #888; font-size: 0.9rem;">
+            还没有账号？
+            <span style="color: #e91e63; cursor: pointer; font-weight: 600;" onclick="showRegisterForm()">
+              立即注册 ✨
+            </span>
+          </p>
+        </div>
+
+        <!-- 注册表单 -->
+        <div class="login-form" id="register-form-box" style="display: none;">
+          <h3 style="text-align: center; color: #e91e63; margin-bottom: 15px;">新用户注册 🌸</h3>
+          <div style="background: #fff3e0; padding: 10px 15px; border-radius: 10px; margin-bottom: 15px; font-size: 0.85rem; color: #f57c00;">
+            ⚠️ 温馨提示：请使用你的<strong>真实姓名</strong>作为账号，方便闺蜜找到你哦~
+          </div>
+          <div class="avatar-select">
+            <p>选择你的头像</p>
+            <div class="avatar-options">
+              <span class="avatar-option active" data-avatar="👧">👧</span>
+              <span class="avatar-option" data-avatar="👩">👩</span>
+              <span class="avatar-option" data-avatar="👱‍♀️">👱‍♀️</span>
+              <span class="avatar-option" data-avatar="🧑‍🦰">🧑‍🦰</span>
+              <span class="avatar-option" data-avatar="👸">👸</span>
+              <span class="avatar-option" data-avatar="🧚">🧚</span>
+            </div>
+          </div>
+          <input type="text" id="register-nickname" placeholder="请输入真实姓名（2-10个字）..." maxlength="10">
+          <input type="password" id="register-password" placeholder="设置密码（4-16位）..." maxlength="16">
+          <input type="password" id="register-password2" placeholder="确认密码..." maxlength="16">
+          <button id="register-btn" class="btn btn-primary">注册账号 🎉</button>
+          <p style="text-align: center; margin-top: 15px; color: #888; font-size: 0.9rem;">
+            已有账号？
+            <span style="color: #e91e63; cursor: pointer; font-weight: 600;" onclick="showLoginForm()">
+              返回登录 🏠
+            </span>
+          </p>
+        </div>
+
+        <!-- 制作信息 -->
+        <div class="made-by">
+          <p>本游戏由杨肖制作 💖</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- 主页面 -->
+    <div id="main-page" class="page">
+      <header class="top-bar">
+        <div class="user-info">
+          <span id="user-avatar" class="avatar">👧</span>
+          <span id="user-nickname">昵称</span>
+        </div>
+        <div class="coins-info">
+          <span>💰</span>
+          <span id="user-coins">200</span>
+        </div>
+        <button class="btn-icon" onclick="openShopModal()">🛒</button>
+        <button class="btn-icon" onclick="openAchievementModal()">🏆</button>
+      </header>
+
+      <!-- 每日签到提示 -->
+      <div id="daily-bonus-banner" class="bonus-banner" style="display: none;">
+        <span id="bonus-text"></span>
+        <button onclick="closeBonusBanner()">×</button>
+      </div>
+
+      <div class="status-bar">
+        <div class="status-item">
+          <span class="status-icon">❤️</span>
+          <div class="status-bar-inner">
+            <div class="status-fill mood-fill" id="mood-fill" style="width: 80%"></div>
+          </div>
+          <span class="status-text" id="mood-text">80</span>
+        </div>
+        <div class="status-item">
+          <span class="status-icon">⚡</span>
+          <div class="status-bar-inner">
+            <div class="status-fill energy-fill" id="energy-fill" style="width: 80%"></div>
+          </div>
+          <span class="status-text" id="energy-text">80</span>
+        </div>
+        <div class="status-item">
+          <span class="status-icon">🍔</span>
+          <div class="status-bar-inner">
+            <div class="status-fill hunger-fill" id="hunger-fill" style="width: 70%"></div>
+          </div>
+          <span class="status-text" id="hunger-text">70</span>
+        </div>
+        <div class="status-item">
+          <span class="status-icon">📚</span>
+          <div class="status-bar-inner">
+            <div class="status-fill study-fill" id="study-fill" style="width: 50%"></div>
+          </div>
+          <span class="status-text" id="study-text">50</span>
+        </div>
+      </div>
+
+      <nav class="bottom-nav">
+        <button class="nav-btn active" data-page="home">
+          <span class="nav-icon">🏠</span>
+          <span class="nav-label">小屋</span>
+        </button>
+        <button class="nav-btn" data-page="pet">
+          <span class="nav-icon">🐱</span>
+          <span class="nav-label">宠物</span>
+        </button>
+        <button class="nav-btn" data-page="plaza">
+          <span class="nav-icon">🎡</span>
+          <span class="nav-label">广场</span>
+        </button>
+        <button class="nav-btn" data-page="shop">
+          <span class="nav-icon">🛒</span>
+          <span class="nav-label">商店</span>
+        </button>
+        <button class="nav-btn" data-page="wardrobe">
+          <span class="nav-icon">👗</span>
+          <span class="nav-label">换装</span>
+        </button>
+        <button class="nav-btn" data-page="friends">
+          <span class="nav-icon">👭</span>
+          <span class="nav-label">闺蜜</span>
+        </button>
+      </nav>
+
+      <main class="content-area">
+        <!-- 小屋页面 -->
+        <div id="home-page" class="content-page active">
+          <div class="room-header">
+            <span class="room-title">我的小屋</span>
+            <div class="room-style-select">
+              <select id="room-style" onchange="changeRoomStyle()">
+                <option value="pink">粉色系</option>
+                <option value="blue">蓝色系</option>
+                <option value="green">绿色系</option>
+                <option value="purple">紫色系</option>
+                <option value="yellow">阳光系</option>
+              </select>
+            </div>
+          </div>
+          <div class="room-container" id="room-container">
+            <div class="room-grid" id="room-grid">
+            </div>
+            <div class="character" id="character">
+              <div class="character-body" id="character-body">
+                <div class="char-hair"></div>
+                <div class="char-head">
+                  <div class="char-face">
+                    <div class="char-eyes">
+                      <div class="char-eye-left">
+                        <div class="char-pupil"></div>
+                        <div class="char-shine"></div>
+                      </div>
+                      <div class="char-eye-right">
+                        <div class="char-pupil"></div>
+                        <div class="char-shine"></div>
+                      </div>
+                    </div>
+                    <div class="char-eyebrows">
+                      <div class="char-eyebrow-left"></div>
+                      <div class="char-eyebrow-right"></div>
+                    </div>
+                    <div class="char-nose"></div>
+                    <div class="char-mouth"></div>
+                    <div class="char-cheeks">
+                      <div class="char-cheek-left"></div>
+                      <div class="char-cheek-right"></div>
+                    </div>
+                  </div>
+                  <div class="char-ear-left"></div>
+                  <div class="char-ear-right"></div>
+                </div>
+                <div class="char-neck"></div>
+                <div class="char-top"></div>
+                <div class="char-arms">
+                  <div class="char-arm-left">
+                    <div class="char-hand-left"></div>
+                  </div>
+                  <div class="char-arm-right">
+                    <div class="char-hand-right"></div>
+                  </div>
+                </div>
+                <div class="char-bottom"></div>
+                <div class="char-legs">
+                  <div class="char-leg-left"></div>
+                  <div class="char-leg-right"></div>
+                </div>
+                <div class="char-shoes">
+                  <div class="char-shoe-left"></div>
+                  <div class="char-shoe-right"></div>
+                </div>
+                <div class="char-accessory"></div>
+              </div>
+            </div>
+          </div>
+          <div class="furniture-bar">
+            <h4>已购家具</h4>
+            <div class="owned-furniture" id="owned-furniture">
+              <p class="empty-text">还没有家具，去商店买吧~</p>
+            </div>
+          </div>
+          <div class="action-buttons">
+            <button class="action-btn" data-action="eat">
+              <span>🍔</span>
+              <span>吃东西</span>
+              <span class="cost">-10💰</span>
+            </button>
+            <button class="action-btn" data-action="sleep">
+              <span>😴</span>
+              <span>睡觉</span>
+              <span class="free">免费</span>
+            </button>
+            <button class="action-btn" data-action="study">
+              <span>📚</span>
+              <span>学习</span>
+              <span class="free">免费</span>
+            </button>
+            <button class="action-btn" data-action="play">
+              <span>🎮</span>
+              <span>玩耍</span>
+              <span class="free">免费</span>
+            </button>
+            <button class="action-btn" data-action="diary">
+              <span>📖</span>
+              <span>日记</span>
+              <span class="free">免费</span>
+            </button>
+            <button class="action-btn" data-action="coffee">
+              <span>☕</span>
+              <span>喝咖啡</span>
+              <span class="cost">-5💰</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- 宠物页面 -->
+        <div id="pet-page" class="content-page">
+          <div class="pet-container">
+            <div class="pet-header">
+              <h2>🐾 我的宠物</h2>
+            </div>
+
+            <div id="pet-no-pet" class="pet-no-pet" style="display: none;">
+              <div class="pet-adopt-title">选择一只小可爱领养吧~</div>
+              <div class="pet-adopt-grid" id="pet-adopt-list">
+              </div>
+            </div>
+
+            <div id="pet-has-pet" class="pet-has-pet" style="display: none;">
+              <div class="pet-info-card">
+                <div class="pet-avatar-area">
+                  <div class="pet-avatar" id="pet-avatar">🐱</div>
+                  <div class="pet-level-badge" id="pet-level">Lv.1</div>
+                </div>
+                <div class="pet-name" id="pet-name">小猫咪</div>
+                <div class="pet-exp-bar">
+                  <div class="pet-exp-fill" id="pet-exp-fill" style="width: 0%;"></div>
+                  <span class="pet-exp-text" id="pet-exp-text">0/100</span>
+                </div>
+              </div>
+
+              <div class="pet-stats">
+                <div class="pet-stat-item">
+                  <span class="pet-stat-icon">🍖</span>
+                  <div class="pet-stat-info">
+                    <div class="pet-stat-label">饥饿度</div>
+                    <div class="pet-stat-bar">
+                      <div class="pet-stat-fill" id="pet-hunger-fill" style="width: 80%; background: #ff9800;"></div>
+                    </div>
+                  </div>
+                  <span class="pet-stat-value" id="pet-hunger-value">80</span>
+                </div>
+                <div class="pet-stat-item">
+                  <span class="pet-stat-icon">😊</span>
+                  <div class="pet-stat-info">
+                    <div class="pet-stat-label">心情值</div>
+                    <div class="pet-stat-bar">
+                      <div class="pet-stat-fill" id="pet-mood-fill" style="width: 90%; background: #e91e63;"></div>
+                    </div>
+                  </div>
+                  <span class="pet-stat-value" id="pet-mood-value">90</span>
+                </div>
+                <div class="pet-stat-item">
+                  <span class="pet-stat-icon">💚</span>
+                  <div class="pet-stat-info">
+                    <div class="pet-stat-label">健康值</div>
+                    <div class="pet-stat-bar">
+                      <div class="pet-stat-fill" id="pet-health-fill" style="width: 95%; background: #4caf50;"></div>
+                    </div>
+                  </div>
+                  <span class="pet-stat-value" id="pet-health-value">95</span>
+                </div>
+              </div>
+
+              <div class="pet-actions">
+                <button class="pet-action-btn" onclick="petFeed()">
+                  <span class="pet-action-icon">🍖</span>
+                  <span class="pet-action-text">喂食</span>
+                  <span class="pet-action-cost">食物x1</span>
+                </button>
+                <button class="pet-action-btn" onclick="petPlay()">
+                  <span class="pet-action-icon">🎾</span>
+                  <span class="pet-action-text">玩耍</span>
+                  <span class="pet-action-cost">玩具x1</span>
+                </button>
+                <button class="pet-action-btn" onclick="petPet()">
+                  <span class="pet-action-icon">🤲</span>
+                  <span class="pet-action-text">抚摸</span>
+                  <span class="pet-action-cost">免费</span>
+                </button>
+                <button class="pet-action-btn" onclick="petSleep()">
+                  <span class="pet-action-icon">💤</span>
+                  <span class="pet-action-text">睡觉</span>
+                  <span class="pet-action-cost">恢复</span>
+                </button>
+              </div>
+
+              <div class="pet-skill-section">
+                <div class="pet-skill-title">🌟 宠物技能</div>
+                <div class="pet-skills-grid" id="pet-skills">
+                  <div class="pet-skill-item locked">
+                    <div class="pet-skill-icon">🔒</div>
+                    <div class="pet-skill-name">找金币</div>
+                    <div class="pet-skill-desc">Lv.5解锁</div>
+                  </div>
+                  <div class="pet-skill-item locked">
+                    <div class="pet-skill-icon">🔒</div>
+                    <div class="pet-skill-name">卖萌</div>
+                    <div class="pet-skill-desc">Lv.10解锁</div>
+                  </div>
+                  <div class="pet-skill-item locked">
+                    <div class="pet-skill-icon">🔒</div>
+                    <div class="pet-skill-name">守护</div>
+                    <div class="pet-skill-desc">Lv.20解锁</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="pet-supplies">
+                <div class="pet-supplies-title">🎁 我的物品</div>
+                <div class="pet-supplies-items">
+                  <div class="pet-supply-item">
+                    <span class="pet-supply-icon">🍖</span>
+                    <span class="pet-supply-name">宠物食物</span>
+                    <span class="pet-supply-count" id="pet-food-count">x10</span>
+                  </div>
+                  <div class="pet-supply-item">
+                    <span class="pet-supply-icon">🎾</span>
+                    <span class="pet-supply-name">宠物玩具</span>
+                    <span class="pet-supply-count" id="pet-toy-count">x2</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 广场页面 -->
+        <div id="plaza-page" class="content-page">
+          <div class="plaza-header">
+            <h2>🎡 闺蜜广场</h2>
+            <p>在线好友: <span id="online-count">0</span> 人</p>
+          </div>
+          
+          <div class="daily-tasks-section">
+            <div class="section-header">
+              <h3>📋 每日任务</h3>
+            </div>
+            <div id="daily-tasks-list" class="tasks-list">
+            </div>
+          </div>
+          
+          <div class="moments-section">
+            <div class="section-header">
+              <h3>💫 闺蜜圈</h3>
+            </div>
+            <div class="moment-publish">
+              <div class="moment-publish-header">
+                <div class="moment-avatar" id="moment-user-avatar">👧</div>
+                <textarea id="moment-input" placeholder="分享一下今天的心情吧~" rows="2"></textarea>
+              </div>
+              <div class="moment-publish-footer">
+                <button class="btn btn-small btn-primary" onclick="publishMoment()">发布</button>
+              </div>
+            </div>
+            <div id="moments-list" class="moments-list">
+              <p class="empty-text">还没有动态，快来发布第一条吧~</p>
+            </div>
+          </div>
+          
+          <div class="game-cards">
+            <div class="game-card" data-game="draw">
+              <div class="game-icon">🎨</div>
+              <div class="game-info">
+                <h3>你画我猜</h3>
+                <p>多人版，比比谁画得好！</p>
+              </div>
+              <button class="btn btn-small btn-primary" onclick="enterGame('draw')">进入</button>
+            </div>
+            
+            <div class="game-card" data-game="adventure">
+              <div class="game-icon">🎲</div>
+              <div class="game-info">
+                <h3>冒险棋</h3>
+                <p>30格挑战，班主任刘老师出没！</p>
+              </div>
+              <button class="btn btn-small btn-primary" onclick="enterGame('adventure')">进入</button>
+            </div>
+            
+            <div class="game-card" data-game="tacit">
+              <div class="game-icon">🤝</div>
+              <div class="game-info">
+                <h3>默契大挑战</h3>
+                <p>看看你们是不是真闺蜜！</p>
+              </div>
+              <button class="btn btn-small btn-primary" onclick="enterGame('tacit')">进入</button>
+            </div>
+            
+            <div class="game-card" data-game="truth">
+              <div class="game-icon">🎭</div>
+              <div class="game-info">
+                <h3>真心话大冒险</h3>
+                <p>闺蜜版，超刺激！</p>
+              </div>
+              <button class="btn btn-small btn-primary" onclick="enterGame('truth')">进入</button>
+            </div>
+          </div>
+
+          <div class="room-list-section">
+            <div class="section-header">
+              <h3>🏠 游戏房间</h3>
+              <button class="btn btn-small btn-secondary" onclick="showCreateRoomModal()">+ 创建房间</button>
+            </div>
+            <div id="room-list" class="room-list">
+              <p class="empty-text">暂无房间，创建一个吧~</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- 商店页面 -->
+        <div id="shop-page" class="content-page">
+          <div class="shop-header">
+            <h2>🛒 小镇商店</h2>
+            <p>金币: <span id="shop-coins">200</span> 💰</p>
+          </div>
+          
+          <div class="shop-tabs">
+            <button class="shop-tab active" data-type="furniture">🛋️ 家具店</button>
+            <button class="shop-tab" data-type="gifts">🎁 礼物店</button>
+            <button class="shop-tab" data-type="petSupplies">🐾 宠物用品</button>
+          </div>
+          
+          <div id="shop-items" class="shop-items">
+          </div>
+        </div>
+
+        <!-- 换装页面 -->
+        <div id="wardrobe-page" class="content-page">
+          <div class="wardrobe-container">
+            <div class="wardrobe-preview">
+              <div class="character-large" id="character-large">
+                <div class="character-body-large" id="character-body-large">
+                  <div class="char-hair-large"></div>
+                  <div class="char-head-large">
+                    <div class="char-face-large">
+                      <div class="char-eyes-large">
+                        <div class="char-eye-left-large">
+                          <div class="char-pupil-large"></div>
+                          <div class="char-shine-large"></div>
+                        </div>
+                        <div class="char-eye-right-large">
+                          <div class="char-pupil-large"></div>
+                          <div class="char-shine-large"></div>
+                        </div>
+                      </div>
+                      <div class="char-eyebrows-large">
+                        <div class="char-eyebrow-left-large"></div>
+                        <div class="char-eyebrow-right-large"></div>
+                      </div>
+                      <div class="char-nose-large"></div>
+                      <div class="char-mouth-large"></div>
+                      <div class="char-cheeks-large">
+                        <div class="char-cheek-left-large"></div>
+                        <div class="char-cheek-right-large"></div>
+                      </div>
+                    </div>
+                    <div class="char-ear-left-large"></div>
+                    <div class="char-ear-right-large"></div>
+                  </div>
+                  <div class="char-neck-large"></div>
+                  <div class="char-top-large"></div>
+                  <div class="char-arms-large">
+                    <div class="char-arm-left-large">
+                      <div class="char-hand-left-large"></div>
+                    </div>
+                    <div class="char-arm-right-large">
+                      <div class="char-hand-right-large"></div>
+                    </div>
+                  </div>
+                  <div class="char-bottom-large"></div>
+                  <div class="char-legs-large">
+                    <div class="char-leg-left-large"></div>
+                    <div class="char-leg-right-large"></div>
+                  </div>
+                  <div class="char-shoes-large">
+                    <div class="char-shoe-left-large"></div>
+                    <div class="char-shoe-right-large"></div>
+                  </div>
+                  <div class="char-accessory-large"></div>
+                </div>
+              </div>
+            </div>
+            
+            <div class="wardrobe-tabs">
+              <button class="wardrobe-tab active" data-category="hair">💇 发型</button>
+              <button class="wardrobe-tab" data-category="hairColor">🎨 发色</button>
+              <button class="wardrobe-tab" data-category="top">👕 上衣</button>
+              <button class="wardrobe-tab" data-category="bottom">👖 下装</button>
+              <button class="wardrobe-tab" data-category="color">🌈 颜色</button>
+              <button class="wardrobe-tab" data-category="accessory">✨ 配饰</button>
+            </div>
+            
+            <div class="wardrobe-items" id="wardrobe-items">
+            </div>
+          </div>
+        </div>
+
+        <!-- 闺蜜页面 -->
+        <div id="friends-page" class="content-page">
+          <div class="friends-section">
+            <h3>👭 在线闺蜜</h3>
+            <div id="friends-list" class="friends-list">
+              <p class="empty-text">暂无在线闺蜜~</p>
+            </div>
+          </div>
+          
+          <div class="chat-section">
+            <h3>💬 小镇聊天</h3>
+            <div id="chat-messages" class="chat-messages">
+            </div>
+            <div class="chat-input">
+              <input type="text" id="chat-input" placeholder="说点什么...">
+              <button class="btn btn-primary btn-small" onclick="sendChatMessage()">发送</button>
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+
+    <!-- 商店模态框 -->
+    <div id="shop-modal" class="modal">
+      <div class="modal-content large-modal">
+        <div class="modal-header">
+          <h2>🛒 商店</h2>
+          <button class="close-btn" onclick="closeShopModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="shop-tabs-modal">
+            <button class="shop-modal-tab active" data-type="furniture">🛋️ 家具店</button>
+            <button class="shop-modal-tab" data-type="gifts">🎁 礼物店</button>
+            <button class="shop-modal-tab" data-type="petSupplies">🐾 宠物用品</button>
+          </div>
+          <div id="shop-modal-items" class="shop-items-modal">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 成就模态框 -->
+    <div id="achievement-modal" class="modal">
+      <div class="modal-content large-modal">
+        <div class="modal-header">
+          <h2>🏆 我的成就</h2>
+          <button class="close-btn" onclick="closeAchievementModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="achievement-tabs">
+            <button class="ach-tab active" data-type="social">👥 社交</button>
+            <button class="ach-tab" data-type="game">🎮 游戏</button>
+            <button class="ach-tab" data-type="daily">📅 日常</button>
+          </div>
+          <div id="achievement-list" class="achievement-list">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 游戏房间模态框 -->
+    <div id="game-modal" class="modal">
+      <div class="modal-content game-modal-content">
+        <div class="modal-header">
+          <h2 id="game-modal-title">游戏</h2>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button class="help-btn" onclick="showGameHelp()" title="游戏说明">
+              <span style="font-size: 1.2rem;">❓</span>
+            </button>
+            <button class="close-btn" onclick="closeGameModal()">✕</button>
+          </div>
+        </div>
+        <div id="game-modal-body" class="modal-body">
+        </div>
+      </div>
+    </div>
+
+    <!-- 游戏说明模态框 -->
+    <div id="game-help-modal" class="modal">
+      <div class="modal-content small-modal help-modal">
+        <div class="modal-header">
+          <h2 id="help-modal-title">游戏说明</h2>
+          <button class="close-btn" onclick="closeGameHelp()">✕</button>
+        </div>
+        <div id="help-modal-body" class="modal-body help-body">
+        </div>
+      </div>
+    </div>
+
+    <!-- 创建房间模态框 -->
+    <div id="create-room-modal" class="modal">
+      <div class="modal-content small-modal">
+        <div class="modal-header">
+          <h2>创建房间</h2>
+          <button class="close-btn" onclick="closeCreateRoomModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <input type="text" id="room-name-input" placeholder="房间名称（可选）">
+          <p style="margin: 10px 0; color: #666;">游戏类型: <span id="create-room-type"></span></p>
+          <label class="checkbox-label">
+            <input type="checkbox" id="add-robot-checkbox">
+            <span>添加机器人陪玩（一个人也能玩！）</span>
+          </label>
+          <button class="btn btn-primary" onclick="createRoom()">创建房间</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 日记模态框 -->
+    <div id="diary-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>📖 我的日记</h2>
+          <button class="close-btn" onclick="closeDiaryModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="diary-list" id="diary-list">
+          </div>
+          <div class="diary-input">
+            <textarea id="diary-text" placeholder="今天发生了什么有趣的事呢？" rows="3"></textarea>
+            <button class="btn btn-primary" onclick="saveDiary()">保存日记</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 串门模态框 -->
+    <div id="visit-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>🏠 <span id="visit-host-name">闺蜜</span>的小屋</h2>
+          <button class="close-btn" onclick="closeVisitModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="visit-tabs">
+            <button class="visit-tab active" data-tab="room" onclick="switchVisitTab('room')">🏠 小屋</button>
+            <button class="visit-tab" data-tab="diary" onclick="switchVisitTab('diary')">📖 日记</button>
+            <button class="visit-tab" data-tab="pet" onclick="switchVisitTab('pet')">🐾 宠物</button>
+          </div>
+          
+          <div id="visit-room-tab" class="visit-tab-content">
+            <div class="visit-room-container" id="visit-room-grid">
+              <p class="empty-text">加载中...</p>
+            </div>
+          </div>
+          
+          <div id="visit-diary-tab" class="visit-tab-content" style="display: none;">
+            <div class="diary-list" id="visit-diary-list">
+              <p class="empty-text">加载中...</p>
+            </div>
+          </div>
+          
+          <div id="visit-pet-tab" class="visit-tab-content" style="display: none;">
+            <div id="visit-pet-content">
+              <p class="empty-text">加载中...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 送礼物模态框 -->
+    <div id="gift-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>🎁 送礼物给 <span id="gift-target-name"></span></h2>
+          <button class="close-btn" onclick="closeGiftModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="gift-intimacy-info">当前亲密度: <span id="current-intimacy"></span> (<span id="intimacy-level"></span>)</p>
+          <div id="gift-list" class="gift-list">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 新成就提示 -->
+    <div id="achievement-popup" class="achievement-popup" style="display: none;">
+      <div class="achievement-popup-content">
+        <h3>🎉 获得新成就！</h3>
+        <div id="achievement-popup-icons"></div>
+        <p>奖励: <span id="achievement-popup-reward"></span> 💰</p>
+      </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div id="notification" class="notification"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="js/app.js"></script>
+  <script src="js/games.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/wardrobe.js"></script>
+</body>
+</html>
