@@ -144,6 +144,7 @@ socket.on('user_data', (user) => {
   updateCharacter();
   loadRoom();
   loadOwnedFurniture();
+  refreshFriendsList();
   
   if (document.getElementById('shop-page').classList.contains('active')) {
     document.getElementById('shop-coins').textContent = user.coins;
@@ -225,6 +226,7 @@ function initNavigation() {
       if (page === 'plaza') {
         refreshRoomList();
         loadDailyTasks();
+        refreshFriendsList();
         if (typeof loadMoments === 'function') {
           loadMoments();
         }
