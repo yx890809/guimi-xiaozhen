@@ -426,6 +426,12 @@ io.on('connection', (socket) => {
       intimacy_map: sender.intimacy_map 
     });
     
+    // 保存礼物记录
+    await db.query(
+      'INSERT INTO gift_records (from_user, to_user, gift_id, gift_name, gift_icon, gift_price, intimacy_gained) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+      [socket.nickname, targetNickname, gift.id, gift.name, gift.icon, gift.price, gift.intimacy]
+    );
+    
     socket.emit('user_data', sender);
     socket.emit('gift_sent', { gift, to: targetNickname });
     
@@ -440,6 +446,30 @@ io.on('connection', (socket) => {
     }
     
     await checkAchievements(sender, 'gift');
+  });
+  
+  socket.on('get_gift_records', async ({ targetNickname, type } = {}) => {
+    let query = 'SELECT * FROM gift_records';
+    const params = [];
+    
+    if (type === 'sent') {
+      query += ' WHERE from_user = $1';
+      params.push(socket.nickname);
+    } else if (type === 'received') {
+      query += ' WHERE to_user = $1';
+      params.push(socket.nickname);
+    } else if (targetNickname) {
+      query += ' WHERE (from_user = $1 AND to_user = $2) OR (from_user = $2 AND to_user = $1)';
+      params.push(socket.nickname, targetNickname);
+    } else {
+      query += ' WHERE from_user = $1 OR to_user = $1';
+      params.push(socket.nickname);
+    }
+    
+    query += ' ORDER BY created_at DESC LIMIT 100';
+    
+    const result = await db.query(query, params);
+    socket.emit('gift_records', result.rows);
   });
   
   // ========== 成就系统 ==========
@@ -570,11 +600,36 @@ io.on('connection', (socket) => {
   });
   
   function getIntimacyLevel(intimacy) {
-    if (intimacy >= 100) return { name: '灵魂闺蜜', icon: '💖', color: '#ff1493' };
-    if (intimacy >= 75) return { name: '闺蜜达人', icon: '💕', color: '#ff69b4' };
-    if (intimacy >= 50) return { name: '亲密闺蜜', icon: '💗', color: '#ff69b4' };
-    if (intimacy >= 25) return { name: '熟悉朋友', icon: '❤️', color: '#ff6b9d' };
-    return { name: '新认识', icon: '👋', color: '#e91e63' };
+    if (intimacy >= 500) return { 
+      name: '灵魂闺蜜', icon: '💖', color: '#ff1493',
+      min: 500, max: Infinity,
+      privileges: ['专属称号', '神秘礼物解锁', '专属装扮', '每日额外金币', '最高亲密度标识']
+    };
+    if (intimacy >= 300) return { 
+      name: '闺蜜达人', icon: '💕', color: '#ff69b4',
+      min: 300, max: 499,
+      privileges: ['高级称号', '精选礼物解锁', '特殊标识', '每日金币加成']
+    };
+    if (intimacy >= 200) return { 
+      name: '亲密闺蜜', icon: '💗', color: '#ff69b4',
+      min: 200, max: 299,
+      privileges: ['中级称号', '更多礼物选择', '亲密度标识']
+    };
+    if (intimacy >= 100) return { 
+      name: '知心好友', icon: '❤️', color: '#ff6b9d',
+      min: 100, max: 199,
+      privileges: ['初级称号', '基础礼物解锁', '好友标识']
+    };
+    if (intimacy >= 50) return { 
+      name: '熟悉朋友', icon: '💛', color: '#ffb74d',
+      min: 50, max: 99,
+      privileges: ['普通朋友标识', '可以串门', '可以戳一下']
+    };
+    return { 
+      name: '新认识', icon: '👋', color: '#e91e63',
+      min: 0, max: 49,
+      privileges: ['开始认识', '可以聊天', '可以送礼物']
+    };
   }
   
   // ========== 房间风格 ==========

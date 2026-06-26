@@ -254,15 +254,138 @@ function closeGiftModal() {
   document.getElementById('gift-modal').classList.remove('active');
 }
 
+let currentGiftTarget = '';
+let currentRecordFilter = 'all';
+
+function switchGiftTab(tab) {
+  document.querySelectorAll('.gift-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.gift-panel').forEach(p => p.classList.remove('active'));
+  
+  event.target.classList.add('active');
+  document.getElementById('gift-' + tab + '-panel').classList.add('active');
+  
+  if (tab === 'records') {
+    loadGiftRecords('all');
+  }
+}
+
+function filterGiftRecords(type) {
+  currentRecordFilter = type;
+  document.querySelectorAll('.record-filter-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  loadGiftRecords(type);
+}
+
+function loadGiftRecords(type) {
+  const list = document.getElementById('gift-records-list');
+  if (!list) return;
+  
+  list.innerHTML = '<p class="empty-text">加载中...</p>';
+  socket.emit('get_gift_records', { targetNickname: currentGiftTarget, type });
+}
+
+socket.on('gift_records', (records) => {
+  const list = document.getElementById('gift-records-list');
+  if (!list) return;
+  
+  if (records.length === 0) {
+    list.innerHTML = '<p class="empty-text">暂无礼物记录~</p>';
+    return;
+  }
+  
+  list.innerHTML = records.map(r => {
+    const isSent = r.from_user === currentUser?.nickname;
+    const time = new Date(r.created_at).toLocaleString('zh-CN', {
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    
+    return `
+      <div class="gift-record-item ${isSent ? 'sent' : 'received'}">
+        <div class="record-icon">${r.gift_icon}</div>
+        <div class="record-info">
+          <div class="record-title">
+            ${isSent ? '送给 ' + r.to_user : r.from_user + ' 送你'}
+          </div>
+          <div class="record-detail">
+            ${r.gift_name} · 💕 +${r.intimacy_gained}
+          </div>
+          <div class="record-time">${time}</div>
+        </div>
+        <div class="record-price">💰 ${r.gift_price}</div>
+      </div>
+    `;
+  }).join('');
+});
+
+const intimacyLevels = [
+  { name: '灵魂闺蜜', icon: '💖', color: '#ff1493', min: 500, max: '∞', privileges: ['专属称号', '神秘礼物解锁', '专属装扮', '每日额外金币', '最高亲密度标识'] },
+  { name: '闺蜜达人', icon: '💕', color: '#ff69b4', min: 300, max: 499, privileges: ['高级称号', '精选礼物解锁', '特殊标识', '每日金币加成'] },
+  { name: '亲密闺蜜', icon: '💗', color: '#ff69b4', min: 200, max: 299, privileges: ['中级称号', '更多礼物选择', '亲密度标识'] },
+  { name: '知心好友', icon: '❤️', color: '#ff6b9d', min: 100, max: 199, privileges: ['初级称号', '基础礼物解锁', '好友标识'] },
+  { name: '熟悉朋友', icon: '💛', color: '#ffb74d', min: 50, max: 99, privileges: ['普通朋友标识', '可以串门', '可以戳一下'] },
+  { name: '新认识', icon: '👋', color: '#e91e63', min: 0, max: 49, privileges: ['开始认识', '可以聊天', '可以送礼物'] }
+];
+
+function showIntimacyDetail() {
+  const list = document.getElementById('intimacy-levels-list');
+  if (list) {
+    list.innerHTML = intimacyLevels.map(level => `
+      <div class="intimacy-level-item" style="border-left: 4px solid ${level.color};">
+        <div class="level-header">
+          <span class="level-icon">${level.icon}</span>
+          <div class="level-info">
+            <div class="level-name">${level.name}</div>
+            <div class="level-range">亲密度: ${level.min} - ${level.max}</div>
+          </div>
+        </div>
+        <div class="level-privileges">
+          ${level.privileges.map(p => `<span class="privilege-tag">${p}</span>`).join('')}
+        </div>
+      </div>
+    `).join('');
+  }
+  document.getElementById('intimacy-detail-modal').classList.add('active');
+}
+
+function closeIntimacyDetailModal() {
+  document.getElementById('intimacy-detail-modal').classList.remove('active');
+}
+
 socket.on('intimacy_data', (data) => {
   const currentIntimacy = document.getElementById('current-intimacy');
   const intimacyLevel = document.getElementById('intimacy-level');
+  const intimacyIconLevel = document.getElementById('intimacy-icon-level');
+  const intimacyLevelName = document.getElementById('intimacy-level-name');
+  const progressBar = document.getElementById('intimacy-progress-bar');
+  const nextLevelIntimacy = document.getElementById('next-level-intimacy');
   
   if (currentIntimacy) {
     currentIntimacy.textContent = data.intimacy;
   }
   if (intimacyLevel) {
     intimacyLevel.textContent = data.level.name + ' ' + data.level.icon;
+  }
+  if (intimacyIconLevel) {
+    intimacyIconLevel.textContent = data.level.icon;
+  }
+  if (intimacyLevelName) {
+    intimacyLevelName.textContent = data.level.name;
+    intimacyLevelName.style.color = data.level.color;
+  }
+  
+  const nextLevel = intimacyLevels.find(l => data.intimacy < l.max);
+  if (progressBar && nextLevel) {
+    const currentMin = data.level.min;
+    const currentMax = nextLevel.min;
+    const progress = ((data.intimacy - currentMin) / (currentMax - currentMin)) * 100;
+    progressBar.style.width = Math.min(progress, 100) + '%';
+    progressBar.style.background = data.level.color;
+  }
+  if (nextLevelIntimacy && nextLevel) {
+    nextLevelIntimacy.textContent = nextLevel.min;
   }
   
   const intimacyStatus = document.getElementById('intimacy-' + data.target);

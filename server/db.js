@@ -9,6 +9,7 @@ const FRIENDSHIPS_FILE = path.join(DATA_DIR, 'friendships.json');
 const MESSAGES_FILE = path.join(DATA_DIR, 'messages.json');
 const MOMENTS_FILE = path.join(DATA_DIR, 'moments.json');
 const CHAT_MESSAGES_FILE = path.join(DATA_DIR, 'chat_messages.json');
+const GIFT_RECORDS_FILE = path.join(DATA_DIR, 'gift_records.json');
 
 function ensureDataDir() {
   if (!fs.existsSync(DATA_DIR)) {
@@ -65,6 +66,9 @@ async function initDB() {
     }
     if (!fs.existsSync(CHAT_MESSAGES_FILE)) {
       writeJSONFile(CHAT_MESSAGES_FILE, { messages: [], messageIdCounter: 1 });
+    }
+    if (!fs.existsSync(GIFT_RECORDS_FILE)) {
+      writeJSONFile(GIFT_RECORDS_FILE, { records: [], recordIdCounter: 1 });
     }
     console.log('✅ 文件存储初始化完成');
     return;
@@ -144,6 +148,20 @@ async function initDB() {
         id SERIAL PRIMARY KEY,
         from_user VARCHAR(50) NOT NULL,
         content TEXT NOT NULL,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS gift_records (
+        id SERIAL PRIMARY KEY,
+        from_user VARCHAR(50) NOT NULL,
+        to_user VARCHAR(50) NOT NULL,
+        gift_id VARCHAR(50) NOT NULL,
+        gift_name VARCHAR(50) NOT NULL,
+        gift_icon VARCHAR(10) NOT NULL,
+        gift_price INT NOT NULL,
+        intimacy_gained INT NOT NULL,
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);
@@ -407,6 +425,29 @@ function fileQuery(text, params) {
   if (text.includes('SELECT * FROM chat_messages')) {
     const chatData = readJSONFile(CHAT_MESSAGES_FILE, { messages: [], messageIdCounter: 1 });
     return { rows: chatData.messages.sort((a, b) => new Date(a.created_at) - new Date(b.created_at)) };
+  }
+
+  if (text.includes('INSERT INTO gift_records')) {
+    const giftData = readJSONFile(GIFT_RECORDS_FILE, { records: [], recordIdCounter: 1 });
+    const record = {
+      id: giftData.recordIdCounter++,
+      from_user: params[0],
+      to_user: params[1],
+      gift_id: params[2],
+      gift_name: params[3],
+      gift_icon: params[4],
+      gift_price: params[5],
+      intimacy_gained: params[6],
+      created_at: new Date().toISOString()
+    };
+    giftData.records.push(record);
+    writeJSONFile(GIFT_RECORDS_FILE, giftData);
+    return { rows: [record] };
+  }
+
+  if (text.includes('SELECT * FROM gift_records') && text.includes('ORDER BY')) {
+    const giftData = readJSONFile(GIFT_RECORDS_FILE, { records: [], recordIdCounter: 1 });
+    return { rows: giftData.records.sort((a, b) => new Date(b.created_at) - new Date(a.created_at)) };
   }
 
   return { rows: [] };

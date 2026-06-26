@@ -702,8 +702,53 @@
           <button class="close-btn" onclick="closeGiftModal()">✕</button>
         </div>
         <div class="modal-body">
-          <p class="gift-intimacy-info">当前亲密度: <span id="current-intimacy"></span> (<span id="intimacy-level"></span>)</p>
-          <div id="gift-list" class="gift-list">
+          <div class="gift-intimacy-card" onclick="showIntimacyDetail()">
+            <div class="intimacy-main">
+              <span class="intimacy-icon" id="intimacy-icon-level">👋</span>
+              <div class="intimacy-info">
+                <div class="intimacy-level-name" id="intimacy-level-name">新认识</div>
+                <div class="intimacy-progress">
+                  <div class="intimacy-progress-bar" id="intimacy-progress-bar"></div>
+                  <span class="intimacy-text"><span id="current-intimacy">0</span> / <span id="next-level-intimacy">50</span></span>
+                </div>
+              </div>
+            </div>
+            <div class="intimacy-detail-hint">点击查看等级详情 →</div>
+          </div>
+          
+          <div class="gift-tabs">
+            <button class="gift-tab active" onclick="switchGiftTab('send')">送礼物</button>
+            <button class="gift-tab" onclick="switchGiftTab('records')">礼物记录</button>
+          </div>
+          
+          <div id="gift-send-panel" class="gift-panel active">
+            <div id="gift-list" class="gift-list">
+            </div>
+          </div>
+          
+          <div id="gift-records-panel" class="gift-panel">
+            <div class="gift-records-filter">
+              <button class="record-filter-btn active" onclick="filterGiftRecords('all')">全部</button>
+              <button class="record-filter-btn" onclick="filterGiftRecords('sent')">送出</button>
+              <button class="record-filter-btn" onclick="filterGiftRecords('received')">收到</button>
+            </div>
+            <div id="gift-records-list" class="gift-records-list">
+              <p class="empty-text">加载中...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 亲密度等级详情 -->
+    <div id="intimacy-detail-modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>💕 亲密度等级</h2>
+          <button class="close-btn" onclick="closeIntimacyDetailModal()">✕</button>
+        </div>
+        <div class="modal-body">
+          <div id="intimacy-levels-list" class="intimacy-levels-list">
           </div>
         </div>
       </div>

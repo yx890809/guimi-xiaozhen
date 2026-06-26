@@ -3578,6 +3578,244 @@ body {
   margin-top: 2px;
 }
 
+.gift-intimacy-card {
+  background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
+  border-radius: 12px;
+  padding: 15px;
+  margin-bottom: 15px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.gift-intimacy-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(233, 30, 99, 0.2);
+}
+
+.intimacy-main {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.intimacy-icon {
+  font-size: 3rem;
+}
+
+.intimacy-info {
+  flex: 1;
+}
+
+.intimacy-level-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.intimacy-progress {
+  position: relative;
+  height: 20px;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.intimacy-progress-bar {
+  height: 100%;
+  background: #e91e63;
+  border-radius: 10px;
+  transition: width 0.5s ease;
+}
+
+.intimacy-text {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #333;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.8);
+}
+
+.intimacy-detail-hint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 8px;
+}
+
+.gift-tabs {
+  display: flex;
+  gap: 0;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #f0f0f0;
+}
+
+.gift-tab {
+  flex: 1;
+  padding: 10px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #888;
+  transition: all 0.3s;
+  position: relative;
+}
+
+.gift-tab.active {
+  color: #e91e63;
+  font-weight: 600;
+}
+
+.gift-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #e91e63;
+}
+
+.gift-panel {
+  display: none;
+}
+
+.gift-panel.active {
+  display: block;
+}
+
+.gift-records-filter {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.record-filter-btn {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid #e0e0e0;
+  background: white;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #666;
+  transition: all 0.3s;
+}
+
+.record-filter-btn.active {
+  background: #e91e63;
+  color: white;
+  border-color: #e91e63;
+}
+
+.gift-records-list {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.gift-record-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 10px;
+  margin-bottom: 10px;
+}
+
+.gift-record-item.sent {
+  border-right: 3px solid #e91e63;
+}
+
+.gift-record-item.received {
+  border-left: 3px solid #4caf50;
+}
+
+.record-icon {
+  font-size: 2rem;
+  width: 50px;
+  text-align: center;
+}
+
+.record-info {
+  flex: 1;
+}
+
+.record-title {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+}
+
+.record-detail {
+  font-size: 0.8rem;
+  color: #e91e63;
+  margin: 2px 0;
+}
+
+.record-time {
+  font-size: 0.7rem;
+  color: #999;
+}
+
+.record-price {
+  font-size: 0.9rem;
+  color: #f44336;
+  font-weight: 600;
+}
+
+.intimacy-levels-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.intimacy-level-item {
+  background: #fafafa;
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 12px;
+}
+
+.level-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.level-icon {
+  font-size: 2.5rem;
+}
+
+.level-name {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.level-range {
+  font-size: 0.8rem;
+  color: #888;
+  margin-top: 2px;
+}
+
+.level-privileges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.privilege-tag {
+  background: #fce4ec;
+  color: #e91e63;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.75rem;
+}
+
 /* 登录页底部制作信息 */
 .made-by {
   margin-top: 30px;

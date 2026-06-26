@@ -852,6 +852,7 @@ socket.on('poked', (data) => {
 
 function showGiftModal(targetNickname) {
   document.getElementById('gift-target-name').textContent = targetNickname;
+  currentGiftTarget = targetNickname;
   socket.emit('get_intimacy', { targetNickname });
   
   if (!shopData) {
@@ -859,6 +860,11 @@ function showGiftModal(targetNickname) {
   }
   
   renderGiftList(targetNickname);
+  
+  document.querySelectorAll('.gift-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.gift-panel').forEach(p => p.classList.remove('active'));
+  document.querySelector('.gift-tab')?.classList.add('active');
+  document.getElementById('gift-send-panel')?.classList.add('active');
   
   document.getElementById('gift-modal').classList.add('active');
 }
