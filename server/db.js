@@ -71,8 +71,9 @@ async function initDB() {
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         nickname VARCHAR(50) UNIQUE NOT NULL,
+        password VARCHAR(255) DEFAULT '',
         avatar VARCHAR(10) DEFAULT '👧',
-        coins INTEGER DEFAULT 100,
+        coins INTEGER DEFAULT 200,
         mood INTEGER DEFAULT 80,
         energy INTEGER DEFAULT 80,
         hunger INTEGER DEFAULT 70,
@@ -82,8 +83,20 @@ async function initDB() {
         top VARCHAR(20) DEFAULT 'tshirt',
         bottom VARCHAR(20) DEFAULT 'skirt',
         outfit_color VARCHAR(20) DEFAULT 'pink',
+        accessory VARCHAR(20) DEFAULT 'none',
         furniture TEXT DEFAULT '[]',
+        achievements TEXT DEFAULT '[]',
+        friends TEXT DEFAULT '[]',
+        intimacy_map TEXT DEFAULT '{}',
+        gifts_sent INTEGER DEFAULT 0,
+        gifts_received INTEGER DEFAULT 0,
         diary TEXT DEFAULT '[]',
+        room_style VARCHAR(20) DEFAULT 'pink',
+        pet TEXT DEFAULT 'null',
+        pet_food INTEGER DEFAULT 10,
+        pet_toys INTEGER DEFAULT 2,
+        last_login TIMESTAMP DEFAULT NOW(),
+        login_days INTEGER DEFAULT 0,
         last_online TIMESTAMP DEFAULT NOW(),
         created_at TIMESTAMP DEFAULT NOW()
       )
@@ -107,6 +120,17 @@ async function initDB() {
         to_user INTEGER REFERENCES users(id),
         content TEXT,
         is_read BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT NOW()
+      )
+    `);
+
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS moments (
+        id SERIAL PRIMARY KEY,
+        author VARCHAR(50) NOT NULL,
+        content TEXT NOT NULL,
+        likes TEXT DEFAULT '[]',
+        comments TEXT DEFAULT '[]',
         created_at TIMESTAMP DEFAULT NOW()
       )
     `);

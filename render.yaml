@@ -4,12 +4,16 @@ services:
     runtime: node
     buildCommand: npm install
     startCommand: npm start
-    disk:
-      name: data-disk
-      mountPath: /data
-      sizeGB: 1
     envVars:
       - key: NODE_ENV
         value: production
-      - key: DATA_DIR
-        value: /data
+      - key: DATABASE_URL
+        fromDatabase:
+          name: guimi-db
+          property: connectionString
+
+databases:
+  - name: guimi-db
+    databaseName: guimi_xiaozhen
+    user: guimi_user
+    plan: free

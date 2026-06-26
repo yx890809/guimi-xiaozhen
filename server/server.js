@@ -479,8 +479,11 @@ io.on('connection', (socket) => {
       newAchievements.push('pet_level_20');
     }
     if (type === 'moment') {
-      const momentData = readMoments();
-      const userMoments = momentData.moments.filter(m => m.author === user.nickname);
+      const result = await db.query('SELECT * FROM moments WHERE author = $1', [user.nickname]);
+      const userMoments = result.rows.map(m => ({
+        ...m,
+        likes: m.likes ? JSON.parse(m.likes) : []
+      }));
       const totalLikes = userMoments.reduce((sum, m) => sum + m.likes.length, 0);
       
       if (userMoments.length >= 1 && !owned.includes('moment_first')) {
@@ -717,34 +720,11 @@ io.on('connection', (socket) => {
 
   // ========== 闺蜜圈（朋友圈） ==========
   
-  const fs = require('fs');
-  const MOMENTS_FILE = path.join(__dirname, '..', 'data', 'moments.json');
-  
-  function readMoments() {
-    try {
-      if (fs.existsSync(MOMENTS_FILE)) {
-        const data = fs.readFileSync(MOMENTS_FILE, 'utf-8');
-        return JSON.parse(data);
-      }
-    } catch (err) {
-      console.error('读取朋友圈数据失败:', err);
-    }
-    return { moments: [], momentIdCounter: 1 };
-  }
-  
-  function writeMoments(data) {
-    try {
-      fs.writeFileSync(MOMENTS_FILE, JSON.stringify(data, null, 2), 'utf-8');
-      return true;
-    } catch (err) {
-      console.error('写入朋友圈数据失败:', err);
-      return false;
-    }
-  }
-  
-  socket.on('get_moments', () => {
-    const data = readMoments();
-    const momentsWithUser = data.moments.map(m => {
+  socket.on('get_moments', async () => {
+    const result = await db.query('SELECT * FROM moments ORDER BY created_at DESC');
+    const moments = result.rows;
+    
+    const momentsWithUser = moments.map(m => {
       let user = null;
       for (let [id, u] of onlineUsers) {
         if (u.nickname === m.author) {
@@ -754,6 +734,8 @@ io.on('connection', (socket) => {
       }
       return {
         ...m,
+        likes: m.likes ? JSON.parse(m.likes) : [],
+        comments: m.comments ? JSON.parse(m.comments) : [],
         authorAvatar: user?.avatar || '👧'
       };
     }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
@@ -766,21 +748,17 @@ io.on('connection', (socket) => {
     const user = await getUserByNickname(socket.nickname);
     if (!user) return;
     
-    const data = readMoments();
-    const moment = {
-      id: data.momentIdCounter++,
-      author: socket.nickname,
-      content: content.trim(),
-      likes: [],
-      comments: [],
-      created_at: new Date().toISOString()
-    };
+    const result = await db.query(
+      'INSERT INTO moments (author, content, likes, comments) VALUES ($1, $2, $3, $4) RETURNING *',
+      [socket.nickname, content.trim(), '[]', '[]']
+    );
     
-    data.moments.push(moment);
-    writeMoments(data);
+    const moment = result.rows[0];
     
     io.emit('new_moment', {
       ...moment,
+      likes: [],
+      comments: [],
       authorAvatar: user.avatar
     });
     
@@ -788,19 +766,20 @@ io.on('connection', (socket) => {
   });
   
   socket.on('like_moment', async ({ momentId }) => {
-    const data = readMoments();
-    const moment = data.moments.find(m => m.id === momentId);
+    const result = await db.query('SELECT * FROM moments WHERE id = $1', [momentId]);
+    const moment = result.rows[0];
     if (!moment) return;
     
-    const userIndex = moment.likes.indexOf(socket.nickname);
+    const likes = moment.likes ? JSON.parse(moment.likes) : [];
+    const userIndex = likes.indexOf(socket.nickname);
     if (userIndex > -1) {
-      moment.likes.splice(userIndex, 1);
+      likes.splice(userIndex, 1);
     } else {
-      moment.likes.push(socket.nickname);
+      likes.push(socket.nickname);
     }
     
-    writeMoments(data);
-    io.emit('moment_updated', { id: momentId, likes: moment.likes });
+    await db.query('UPDATE moments SET likes = $1 WHERE id = $2', [JSON.stringify(likes), momentId]);
+    io.emit('moment_updated', { id: momentId, likes });
   });
   
   socket.on('comment_moment', async ({ momentId, content }) => {
@@ -809,10 +788,11 @@ io.on('connection', (socket) => {
     const user = await getUserByNickname(socket.nickname);
     if (!user) return;
     
-    const data = readMoments();
-    const moment = data.moments.find(m => m.id === momentId);
+    const result = await db.query('SELECT * FROM moments WHERE id = $1', [momentId]);
+    const moment = result.rows[0];
     if (!moment) return;
     
+    const comments = moment.comments ? JSON.parse(moment.comments) : [];
     const comment = {
       id: Date.now(),
       author: socket.nickname,
@@ -821,8 +801,9 @@ io.on('connection', (socket) => {
       created_at: new Date().toISOString()
     };
     
-    moment.comments.push(comment);
-    writeMoments(data);
+    comments.push(comment);
+    
+    await db.query('UPDATE moments SET comments = $1 WHERE id = $2', [JSON.stringify(comments), momentId]);
     io.emit('moment_comment', { id: momentId, comment });
   });
 
