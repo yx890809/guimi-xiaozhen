@@ -1043,6 +1043,9 @@ io.on('connection', (socket) => {
         drawer: room.players[room.gameState.drawerIndex].nickname
       });
       startGuessingPhase(room);
+      
+      // 启动机器人猜测逻辑
+      startRobotGuessing(room);
     } else if (phase === 'guessing') {
       // 猜题时间到，进入下一轮
       io.to(roomId).emit('notification', {
@@ -1051,6 +1054,68 @@ io.on('connection', (socket) => {
       nextDrawRound(room);
     }
   });
+
+  // 启动机器人猜测的逻辑
+  function startRobotGuessing(room) {
+    const drawer = room.players[room.gameState.drawerIndex];
+    
+    // 如果画手是机器人，不需要启动猜测
+    if (drawer.isRobot) return;
+    
+    let guessCount = 0;
+    const maxGuesses = 20;
+    room.robotGuessInterval = setInterval(() => {
+      // 检查是否还在同一轮
+      if (room.gameState.drawerIndex !== room.players.findIndex(p => p.id === drawer.id)) {
+        clearInterval(room.robotGuessInterval);
+        return;
+      }
+      
+      const robotGuesses = room.players.filter(p => p.isRobot && p.id !== drawer.id);
+      if (robotGuesses.length === 0 || guessCount >= maxGuesses) {
+        clearInterval(room.robotGuessInterval);
+        return;
+      }
+      
+      // 只有部分机器人会猜测（增加趣味性）
+      const guessingRobots = robotGuesses.filter(() => Math.random() < 0.4);
+      
+      guessingRobots.forEach(robot => {
+        if (Math.random() < 0.25) { // 降低猜对概率
+          io.to(room.id).emit('correct_guess', {
+            guesser: robot.nickname,
+            word: room.gameState.currentWord,
+            scores: room.players.map(p => ({ nickname: p.nickname, score: p.score || 0 }))
+          });
+          clearInterval(room.robotGuessInterval);
+          room.gameState.drawerIndex++;
+          setTimeout(() => nextDrawRound(room), 2000);
+        } else {
+          io.to(room.id).emit('wrong_guess', {
+            guesser: robot.nickname,
+            answer: drawWords[Math.floor(Math.random() * drawWords.length)]
+          });
+        }
+      });
+      
+      guessCount++;
+    }, 3000);
+    
+    // 60秒后强制进入下一轮（与前端倒计时同步）
+    setTimeout(() => {
+      if (room.robotGuessInterval) {
+        clearInterval(room.robotGuessInterval);
+      }
+      // 检查是否还在同一轮
+      if (room.gameState && room.gameState.drawerIndex === room.players.findIndex(p => p.id === drawer.id)) {
+        io.to(room.id).emit('notification', { message: `⏰ 时间到！答案是: ${room.gameState.currentWord}` });
+        setTimeout(() => {
+          room.gameState.drawerIndex++;
+          nextDrawRound(room);
+        }, 2000);
+      }
+    }, 60000);
+  }
 
   function startGuessingPhase(room) {
     // 通知所有玩家进入猜题阶段
@@ -1375,48 +1440,13 @@ function nextDrawRound(room) {
       });
     }, 5000);
   } else {
+    // 人类画手 - 发送绘画任务
     io.to(drawer.id).emit('your_turn_to_draw', {
       word: room.gameState.currentWord
     });
     
-    let guessCount = 0;
-    const maxGuesses = 5;
-    const robotGuessInterval = setInterval(() => {
-      const robotGuesses = room.players.filter(p => p.isRobot && p.id !== drawer.id);
-      if (robotGuesses.length === 0 || guessCount >= maxGuesses) {
-        clearInterval(robotGuessInterval);
-        return;
-      }
-      
-      robotGuesses.forEach(robot => {
-        if (Math.random() < 0.35) {
-          io.to(room.id).emit('correct_guess', {
-            guesser: robot.nickname,
-            word: room.gameState.currentWord,
-            scores: room.players.map(p => ({ nickname: p.nickname, score: p.score || 0 }))
-          });
-          clearInterval(robotGuessInterval);
-          room.gameState.drawerIndex++;
-          setTimeout(() => nextDrawRound(room), 2000);
-        } else {
-          io.to(room.id).emit('wrong_guess', {
-            guesser: robot.nickname,
-            answer: drawWords[Math.floor(Math.random() * drawWords.length)]
-          });
-        }
-      });
-      
-      guessCount++;
-    }, 3000);
-    
-    setTimeout(() => {
-      clearInterval(robotGuessInterval);
-      if (room.gameState.round <= room.gameState.maxRounds) {
-        room.gameState.drawerIndex++;
-        io.to(room.id).emit('notification', { message: `⏰ 时间到！答案是: ${room.gameState.currentWord}` });
-        setTimeout(() => nextDrawRound(room), 2000);
-      }
-    }, 30000);
+    // 注意：机器人猜测逻辑现在只在 draw_phase_end 事件触发后开始
+    // 这样确保绘画阶段完成后才开始猜题
   }
 }
 
