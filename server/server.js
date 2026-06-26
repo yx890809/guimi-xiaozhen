@@ -1015,6 +1015,55 @@ io.on('connection', (socket) => {
     }
   });
 
+  // 绘画者完成绘画
+  socket.on('finish_drawing', ({ roomId }) => {
+    const room = gameRooms.get(roomId);
+    if (!room || room.gameType !== 'draw' || !room.gameState) return;
+    
+    const drawer = room.players[room.gameState.drawerIndex];
+    if (drawer.id !== socket.id) return;
+    
+    // 广播绘画阶段结束，开始猜题阶段
+    io.to(roomId).emit('draw_phase_end', {
+      drawer: drawer.nickname
+    });
+    
+    // 通知下一个玩家开始猜题
+    startGuessingPhase(room);
+  });
+
+  // 时间到
+  socket.on('draw_time_up', ({ roomId, phase }) => {
+    const room = gameRooms.get(roomId);
+    if (!room || room.gameType !== 'draw' || !room.gameState) return;
+    
+    if (phase === 'drawing') {
+      // 绘画时间到，开始猜题阶段
+      io.to(roomId).emit('draw_phase_end', {
+        drawer: room.players[room.gameState.drawerIndex].nickname
+      });
+      startGuessingPhase(room);
+    } else if (phase === 'guessing') {
+      // 猜题时间到，进入下一轮
+      io.to(roomId).emit('notification', {
+        message: '时间到！进入下一轮'
+      });
+      nextDrawRound(room);
+    }
+  });
+
+  function startGuessingPhase(room) {
+    // 通知所有玩家进入猜题阶段
+    room.players.forEach(p => {
+      if (!p.isRobot) {
+        io.to(p.id).emit('start_guessing', {
+          guesser: p.nickname,
+          drawer: room.players[room.gameState.drawerIndex].nickname
+        });
+      }
+    });
+  }
+
   // ========== 冒险棋（增强版：30格+班主任刘老师事件） ==========
   socket.on('roll_dice', ({ roomId }) => {
     const room = gameRooms.get(roomId);

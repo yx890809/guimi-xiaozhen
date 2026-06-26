@@ -4,6 +4,9 @@ let isDrawing = false;
 let currentColor = '#333';
 let currentWord = null;
 let isDrawer = false;
+let drawTimer = null;
+let drawTimeLeft = 60;
+let currentPhase = null;
 
 function initGameUI(room) {
   const body = document.getElementById('game-modal-body');
@@ -89,16 +92,36 @@ function renderDrawGame(room) {
         `).join('')}
       </div>
       <div id="draw-word-display" class="word-display">等待游戏开始...</div>
+      
+      <!-- 阶段指示器 -->
+      <div id="phase-indicator" class="phase-indicator" style="display: none;"></div>
+      
+      <!-- 倒计时器 -->
+      <div class="draw-timer-container">
+        <div id="draw-timer" class="draw-timer" style="display: none;">
+          <span class="timer-icon">⏱️</span>
+          <span id="timer-display" class="timer-display">1:00</span>
+          <span id="timer-label" class="timer-label">剩余时间</span>
+        </div>
+      </div>
+      
       <div class="draw-container">
         <canvas id="draw-canvas" width="350" height="250"></canvas>
       </div>
-      <div id="draw-tools" class="draw-tools" style="display: none;">
-        <div class="color-btn active" data-color="#333" style="background: #333;"></div>
-        <div class="color-btn" data-color="#e91e63" style="background: #e91e63;"></div>
-        <div class="color-btn" data-color="#2196f3" style="background: #2196f3;"></div>
-        <div class="color-btn" data-color="#4caf50" style="background: #4caf50;"></div>
-        <div class="color-btn" data-color="#ff9800" style="background: #ff9800;"></div>
-        <button class="btn btn-small btn-secondary" onclick="clearCanvas()">清除</button>
+      
+      <div id="draw-tools" class="draw-tools-row" style="display: none;">
+        <div class="draw-tools">
+          <div class="color-btn active" data-color="#333" style="background: #333;"></div>
+          <div class="color-btn" data-color="#e91e63" style="background: #e91e63;"></div>
+          <div class="color-btn" data-color="#2196f3" style="background: #2196f3;"></div>
+          <div class="color-btn" data-color="#4caf50" style="background: #4caf50;"></div>
+          <div class="color-btn" data-color="#ff9800" style="background: #ff9800;"></div>
+          <button class="btn btn-small btn-secondary" onclick="clearCanvas()">清除</button>
+        </div>
+        <button id="finish-draw-btn" class="draw-finish-btn" onclick="finishDrawing()">
+          <span class="btn-icon">✓</span>
+          <span>完成绘画</span>
+        </button>
       </div>
       <div id="guess-input" class="guess-input" style="display: none;">
         <input type="text" id="guess-text" placeholder="输入你的答案...">
@@ -194,6 +217,8 @@ function initDrawCanvas() {
 }
 
 socket.on('new_round', (data) => {
+  // 停止之前的计时器
+  stopDrawTimer();
   clearCanvasLocal();
   document.getElementById('guesses-list').innerHTML = '';
   
@@ -218,6 +243,9 @@ socket.on('your_turn_to_draw', (data) => {
   if (wordDisplay) {
     wordDisplay.innerHTML = `你要画: <strong>${data.word}</strong>`;
   }
+  
+  // 启动绘画阶段倒计时
+  startDrawTimer('drawing');
 });
 
 socket.on('draw_data', (data) => {
@@ -249,6 +277,110 @@ function clearCanvasLocal() {
   }
 }
 
+// ========== 倒计时器功能 ==========
+
+function startDrawTimer(phase) {
+  // 停止已有的计时器
+  if (drawTimer) {
+    clearInterval(drawTimer);
+    drawTimer = null;
+  }
+  
+  currentPhase = phase;
+  drawTimeLeft = 60;
+  
+  // 显示计时器
+  const timerEl = document.getElementById('draw-timer');
+  const phaseEl = document.getElementById('phase-indicator');
+  const timerDisplay = document.getElementById('timer-display');
+  const timerLabel = document.getElementById('timer-label');
+  
+  if (timerEl && timerDisplay && timerLabel) {
+    timerEl.style.display = 'flex';
+    updateTimerDisplay();
+    
+    // 设置阶段指示器
+    if (phaseEl) {
+      if (phase === 'drawing') {
+        phaseEl.style.display = 'block';
+        phaseEl.className = 'phase-indicator drawing';
+        phaseEl.textContent = '🎨 绘画阶段';
+        timerLabel.textContent = '绘画剩余';
+      } else if (phase === 'guessing') {
+        phaseEl.style.display = 'block';
+        phaseEl.className = 'phase-indicator guessing';
+        phaseEl.textContent = '🤔 猜题阶段';
+        timerLabel.textContent = '猜题剩余';
+      }
+    }
+    
+    // 启动计时器
+    drawTimer = setInterval(() => {
+      drawTimeLeft--;
+      updateTimerDisplay();
+      
+      // 更新计时器样式（最后10秒警告，最后5秒危险）
+      if (drawTimeLeft <= 5) {
+        timerEl.className = 'draw-timer danger';
+      } else if (drawTimeLeft <= 10) {
+        timerEl.className = 'draw-timer warning';
+      }
+      
+      // 时间到
+      if (drawTimeLeft <= 0) {
+        stopDrawTimer();
+        handleTimerEnd();
+      }
+    }, 1000);
+  }
+}
+
+function updateTimerDisplay() {
+  const timerDisplay = document.getElementById('timer-display');
+  if (timerDisplay) {
+    const minutes = Math.floor(drawTimeLeft / 60);
+    const seconds = drawTimeLeft % 60;
+    timerDisplay.textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }
+}
+
+function stopDrawTimer() {
+  if (drawTimer) {
+    clearInterval(drawTimer);
+    drawTimer = null;
+  }
+  
+  const timerEl = document.getElementById('draw-timer');
+  if (timerEl) {
+    timerEl.style.display = 'none';
+  }
+  
+  const phaseEl = document.getElementById('phase-indicator');
+  if (phaseEl) {
+    phaseEl.style.display = 'none';
+  }
+}
+
+function handleTimerEnd() {
+  // 通知服务器时间到
+  if (currentRoom && currentRoom.id) {
+    socket.emit('draw_time_up', { 
+      roomId: currentRoom.id,
+      phase: currentPhase 
+    });
+  }
+}
+
+function finishDrawing() {
+  // 停止计时器
+  stopDrawTimer();
+  
+  // 通知服务器绘画完成
+  if (currentRoom && currentRoom.id) {
+    socket.emit('finish_drawing', { roomId: currentRoom.id });
+  }
+}
+
 function submitGuess() {
   const input = document.getElementById('guess-text');
   const answer = input.value.trim();
@@ -270,6 +402,9 @@ socket.on('wrong_guess', (data) => {
 });
 
 socket.on('correct_guess', (data) => {
+  // 停止计时器
+  stopDrawTimer();
+  
   const list = document.getElementById('guesses-list');
   if (list) {
     const item = document.createElement('div');
@@ -293,7 +428,26 @@ socket.on('correct_guess', (data) => {
   });
 });
 
+socket.on('start_guessing', (data) => {
+  // 切换到猜题阶段，启动猜题倒计时
+  startDrawTimer('guessing');
+  
+  const wordDisplay = document.getElementById('draw-word-display');
+  if (wordDisplay) {
+    wordDisplay.textContent = `轮到 ${data.guesser} 猜题了！`;
+  }
+});
+
+socket.on('draw_phase_end', (data) => {
+  // 绘画阶段结束，切换到猜题阶段
+  stopDrawTimer();
+  startDrawTimer('guessing');
+});
+
 socket.on('game_ended', (data) => {
+  // 停止计时器
+  stopDrawTimer();
+  
   const body = document.getElementById('game-modal-body');
   body.innerHTML = `
     <div class="game-room" style="text-align: center;">
