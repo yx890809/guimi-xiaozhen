@@ -28,6 +28,16 @@ function initShop() {
 socket.on('shop_data', (data) => {
   shopData = data;
   renderShopItems();
+  
+  const giftModal = document.getElementById('gift-modal');
+  const giftTargetName = document.getElementById('gift-target-name');
+  const giftList = document.getElementById('gift-list');
+  
+  if (giftModal && giftModal.classList.contains('active') && giftTargetName && giftTargetName.textContent) {
+    if (typeof renderGiftList === 'function') {
+      renderGiftList(giftTargetName.textContent);
+    }
+  }
 });
 
 function renderShopItems() {
@@ -245,8 +255,25 @@ function closeGiftModal() {
 }
 
 socket.on('intimacy_data', (data) => {
-  document.getElementById('current-intimacy').textContent = data.intimacy;
-  document.getElementById('intimacy-level').textContent = data.level.name + ' ' + data.level.icon;
+  const currentIntimacy = document.getElementById('current-intimacy');
+  const intimacyLevel = document.getElementById('intimacy-level');
+  
+  if (currentIntimacy) {
+    currentIntimacy.textContent = data.intimacy;
+  }
+  if (intimacyLevel) {
+    intimacyLevel.textContent = data.level.name + ' ' + data.level.icon;
+  }
+  
+  const intimacyStatus = document.getElementById('intimacy-' + data.target);
+  if (intimacyStatus) {
+    intimacyStatus.innerHTML = `
+      <span style="color: ${data.level.color};">
+        ${data.level.icon} ${data.level.name} · 💕 ${data.intimacy}
+      </span>
+    `;
+    intimacyStatus.className = 'intimacy-status';
+  }
 });
 
 // ========== 家具布置 ==========

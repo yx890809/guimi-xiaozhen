@@ -673,12 +673,17 @@ socket.on('online_users', (users) => {
       <div class="friend-info">
         <div class="name">${u.nickname}</div>
         <div class="status">在线中</div>
+        <div class="intimacy-status" id="intimacy-${u.nickname}">加载中...</div>
       </div>
       <button class="visit-btn" onclick="visitFriendHouse('${u.nickname}')">串门</button>
       <button class="poke-btn" onclick="pokeFriend('${u.nickname}')">戳一下</button>
       <button class="gift-btn" onclick="showGiftModal('${u.nickname}')">送礼物</button>
     </div>
   `).join('');
+  
+  otherUsers.forEach(u => {
+    socket.emit('get_intimacy', { targetNickname: u.nickname });
+  });
 });
 
 function pokeFriend(nickname) {
@@ -853,7 +858,27 @@ function showGiftModal(targetNickname) {
     socket.emit('get_shop_data');
   }
   
+  renderGiftList(targetNickname);
+  
   document.getElementById('gift-modal').classList.add('active');
+}
+
+function renderGiftList(targetNickname) {
+  const list = document.getElementById('gift-list');
+  if (!list || !shopData || !shopData.gifts) return;
+  
+  list.innerHTML = shopData.gifts.map(gift => `
+    <div class="gift-item-select" onclick="sendGiftToTarget('${targetNickname}', '${gift.id}')">
+      <div class="gift-icon">${gift.icon}</div>
+      <div class="gift-name">${gift.name}</div>
+      <div class="gift-price">💰 ${gift.price}</div>
+      <div class="gift-intimacy">💕 +${gift.intimacy}</div>
+    </div>
+  `).join('');
+}
+
+function sendGiftToTarget(targetNickname, giftId) {
+  socket.emit('send_gift', { targetNickname, giftId });
 }
 
 function closeGiftModal() {
