@@ -16,6 +16,13 @@ document.addEventListener('DOMContentLoaded', () => {
   initRoomStyle();
   initWardrobeTabs();
   initPet();
+  
+  // 定期刷新在线用户列表
+  setInterval(() => {
+    if (currentUser) {
+      socket.emit('get_online_users');
+    }
+  }, 5000);
 });
 
 function initLoginPage() {
