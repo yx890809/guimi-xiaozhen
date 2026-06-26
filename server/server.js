@@ -728,21 +728,48 @@ io.on('connection', (socket) => {
     const result = await db.query('SELECT * FROM moments ORDER BY created_at DESC');
     const moments = result.rows;
     
-    const momentsWithUser = moments.map(m => {
-      let user = null;
-      for (let [id, u] of onlineUsers) {
-        if (u.nickname === m.author) {
-          user = u;
-          break;
+    // 从数据库获取所有作者的头像信息
+    const authors = [...new Set(moments.map(m => m.author))];
+    const avatarMap = {};
+    
+    for (const author of authors) {
+      const userResult = await db.query('SELECT avatar FROM users WHERE nickname = $1', [author]);
+      if (userResult.rows[0]) {
+        avatarMap[author] = userResult.rows[0].avatar;
+      }
+    }
+    
+    // 也获取评论作者的头像
+    const commentAuthors = new Set();
+    moments.forEach(m => {
+      const comments = m.comments ? JSON.parse(m.comments) : [];
+      comments.forEach(c => commentAuthors.add(c.author));
+    });
+    
+    for (const author of commentAuthors) {
+      if (!avatarMap[author]) {
+        const userResult = await db.query('SELECT avatar FROM users WHERE nickname = $1', [author]);
+        if (userResult.rows[0]) {
+          avatarMap[author] = userResult.rows[0].avatar;
         }
       }
+    }
+    
+    const momentsWithUser = moments.map(m => {
+      const comments = m.comments ? JSON.parse(m.comments) : [];
+      const commentsWithAvatar = comments.map(c => ({
+        ...c,
+        authorAvatar: avatarMap[c.author] || '👧'
+      }));
+      
       return {
         ...m,
         likes: m.likes ? JSON.parse(m.likes) : [],
-        comments: m.comments ? JSON.parse(m.comments) : [],
-        authorAvatar: user?.avatar || '👧'
+        comments: commentsWithAvatar,
+        authorAvatar: avatarMap[m.author] || '👧'
       };
     }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    
     socket.emit('moments_list', momentsWithUser);
   });
   

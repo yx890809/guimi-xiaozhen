@@ -1337,6 +1337,7 @@ function renderMoments(moments) {
         <div class="moment-comments">
           ${m.comments.map(c => `
             <div class="moment-comment">
+              <span class="comment-avatar">${c.authorAvatar || '👧'}</span>
               <span class="comment-author">${escapeHtml(c.author)}:</span>
               <span class="comment-content">${escapeHtml(c.content)}</span>
             </div>

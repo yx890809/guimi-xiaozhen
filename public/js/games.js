@@ -227,7 +227,6 @@ function initDrawCanvas() {
 }
 
 socket.on('new_round', (data) => {
-  // 停止之前的计时器
   stopDrawTimer();
   clearCanvasLocal();
   document.getElementById('guesses-list').innerHTML = '';
@@ -241,6 +240,11 @@ socket.on('new_round', (data) => {
   
   document.getElementById('draw-tools').style.display = isDrawer ? 'flex' : 'none';
   document.getElementById('guess-input').style.display = isDrawer ? 'none' : 'flex';
+  
+  const canvas = document.getElementById('draw-canvas');
+  if (canvas) {
+    canvas.style.pointerEvents = isDrawer ? 'auto' : 'none';
+  }
   
   if (isDrawer) {
     wordDisplay.textContent += ' - 你是画手！';
@@ -439,19 +443,42 @@ socket.on('correct_guess', (data) => {
 });
 
 socket.on('start_guessing', (data) => {
-  // 切换到猜题阶段，启动猜题倒计时
   startDrawTimer('guessing');
   
   const wordDisplay = document.getElementById('draw-word-display');
   if (wordDisplay) {
-    wordDisplay.textContent = `轮到 ${data.guesser} 猜题了！`;
+    wordDisplay.textContent = '猜题阶段 - 快猜猜画的是什么！';
+  }
+  
+  document.getElementById('draw-tools').style.display = 'none';
+  document.getElementById('guess-input').style.display = isDrawer ? 'none' : 'flex';
+  
+  if (isDrawer) {
+    const canvas = document.getElementById('draw-canvas');
+    if (canvas) {
+      canvas.style.pointerEvents = 'none';
+    }
   }
 });
 
 socket.on('draw_phase_end', (data) => {
-  // 绘画阶段结束，切换到猜题阶段
   stopDrawTimer();
   startDrawTimer('guessing');
+  
+  const wordDisplay = document.getElementById('draw-word-display');
+  if (wordDisplay) {
+    wordDisplay.textContent = '猜题阶段 - 快猜猜画的是什么！';
+  }
+  
+  document.getElementById('draw-tools').style.display = 'none';
+  document.getElementById('guess-input').style.display = isDrawer ? 'none' : 'flex';
+  
+  if (isDrawer) {
+    const canvas = document.getElementById('draw-canvas');
+    if (canvas) {
+      canvas.style.pointerEvents = 'none';
+    }
+  }
 });
 
 socket.on('game_ended', (data) => {
