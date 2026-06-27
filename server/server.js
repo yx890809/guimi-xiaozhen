@@ -770,14 +770,26 @@ io.on('connection', (socket) => {
   
   const MAYOR_PASSWORD = 'yxiao0809';
   const mayorSockets = new Set();
-  
+  const mayorNicknames = new Set(); // 存储镇长的昵称，用于重连后恢复权限
+
   socket.on('mayor_login', ({ password }) => {
     if (password === MAYOR_PASSWORD) {
       mayorSockets.add(socket.id);
+      if (socket.nickname) {
+        mayorNicknames.add(socket.nickname);
+      }
       socket.emit('mayor_login_success');
-      console.log('镇长登录:', socket.id);
+      console.log('镇长登录:', socket.id, socket.nickname);
     } else {
       socket.emit('mayor_login_failed');
+    }
+  });
+
+  // 当用户正常登录后，检查是否是镇长，恢复权限
+  socket.on('user_login_complete', () => {
+    if (socket.nickname && mayorNicknames.has(socket.nickname)) {
+      mayorSockets.add(socket.id);
+      socket.emit('mayor_status_restored');
     }
   });
   
@@ -849,21 +861,30 @@ io.on('connection', (socket) => {
   });
   
   socket.on('mayor_get_announcements', async () => {
-    if (!mayorSockets.has(socket.id)) return;
-    
+    if (!mayorSockets.has(socket.id)) {
+      socket.emit('error', { message: '无权限' });
+      return;
+    }
+
     const result = await db.query('SELECT * FROM announcements ORDER BY created_at DESC LIMIT 50');
     socket.emit('mayor_announcements', result.rows);
   });
-  
+
   socket.on('mayor_delete_announcement', async ({ id }) => {
-    if (!mayorSockets.has(socket.id)) return;
+    if (!mayorSockets.has(socket.id)) {
+      socket.emit('error', { message: '无权限' });
+      return;
+    }
     await db.query('DELETE FROM announcements WHERE id = $1', [id]);
     socket.emit('mayor_announcement_deleted', { id });
   });
   
   // 日报编辑部
-  socket.on('mayor_get_stats', async ({ date }) => {
-    if (!mayorSockets.has(socket.id)) return;
+  socket.on('mayor_get_stats', async (data) => {
+    if (!mayorSockets.has(socket.id)) {
+      socket.emit('error', { message: '无权限' });
+      return;
+    }
     
     const stats = {
       totalUsers: 0,
@@ -898,41 +919,47 @@ io.on('connection', (socket) => {
   
   // 惊喜制造机
   socket.on('mayor_set_surprise', async ({ name, icon, description, price }) => {
-    if (!mayorSockets.has(socket.id)) return;
-    
+    if (!mayorSockets.has(socket.id)) {
+      socket.emit('error', { message: '无权限' });
+      return;
+    }
+
     await db.query('DELETE FROM daily_surprise');
     await db.query(
       'INSERT INTO daily_surprise (name, icon, description, price) VALUES ($1, $2, $3, $4)',
       [name, icon, description, price]
     );
-    
+
     socket.emit('mayor_surprise_set', { message: '惊喜已设置！' });
     io.emit('new_surprise', { name, icon, description, price });
   });
-  
+
   socket.on('get_daily_surprise', async () => {
     const result = await db.query('SELECT * FROM daily_surprise WHERE is_active = true');
     if (result.rows.length > 0) {
       socket.emit('daily_surprise', result.rows[0]);
     }
   });
-  
+
   // 镇长奖励
   socket.on('mayor_send_reward', async ({ toUser, rewardType, rewardName, rewardIcon, coins, message }) => {
-    if (!mayorSockets.has(socket.id)) return;
-    
+    if (!mayorSockets.has(socket.id)) {
+      socket.emit('error', { message: '无权限' });
+      return;
+    }
+
     await db.query(
       'INSERT INTO mayor_rewards (to_user, reward_type, reward_name, reward_icon, coins, message) VALUES ($1, $2, $3, $4, $5, $6)',
       [toUser, rewardType, rewardName, rewardIcon, coins || 0, message || null]
     );
-    
+
     const targetUser = Array.from(onlineUsers.values()).find(u => u.nickname === toUser);
     if (targetUser) {
       io.to(targetUser.socketId).emit('mayor_reward_received', {
         rewardType, rewardName, rewardIcon, coins, message
       });
     }
-    
+
     socket.emit('mayor_reward_sent', { message: `奖励已发送给 ${toUser}！` });
   });
   

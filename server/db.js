@@ -643,6 +643,33 @@ function fileQuery(text, params) {
     return { rows: reward ? [reward] : [] };
   }
 
+  // 统计数据
+  if (text.includes('SELECT COUNT(*) as count FROM users')) {
+    const userData = readJSONFile(USERS_FILE, { users: [], userIdCounter: 1 });
+    return { rows: [{ count: userData.users.length }] };
+  }
+
+  if (text.includes('SELECT COUNT(*) as count FROM chat_messages WHERE created_at >= CURRENT_DATE')) {
+    const chatData = readJSONFile(CHAT_MESSAGES_FILE, { messages: [], messageIdCounter: 1 });
+    const today = new Date().toISOString().split('T')[0];
+    const count = chatData.messages.filter(m => m.created_at && m.created_at.startsWith(today)).length;
+    return { rows: [{ count }] };
+  }
+
+  if (text.includes('SELECT COUNT(*) as count FROM gift_records WHERE created_at >= CURRENT_DATE')) {
+    const giftData = readJSONFile(GIFT_RECORDS_FILE, { records: [], recordIdCounter: 1 });
+    const today = new Date().toISOString().split('T')[0];
+    const count = giftData.records.filter(r => r.created_at && r.created_at.startsWith(today)).length;
+    return { rows: [{ count }] };
+  }
+
+  if (text.includes('SELECT COUNT(*) as count FROM moments WHERE created_at >= CURRENT_DATE')) {
+    const momentData = readJSONFile(MOMENTS_FILE, { moments: [], momentIdCounter: 1 });
+    const today = new Date().toISOString().split('T')[0];
+    const count = momentData.moments.filter(m => m.created_at && m.created_at.startsWith(today)).length;
+    return { rows: [{ count }] };
+  }
+
   return { rows: [] };
 }
 

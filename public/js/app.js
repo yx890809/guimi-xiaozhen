@@ -176,12 +176,12 @@ socket.on('register_success', (data) => {
 
 socket.on('user_data', (user) => {
   currentUser = user;
-  
+
   if (user.rememberMe) {
     localStorage.setItem('guimi_nickname', user.nickname);
     localStorage.setItem('guimi_password', document.getElementById('login-password').value || '');
   }
-  
+
   showMainPage();
   updateUserDisplay();
   updateStatusBars();
@@ -189,29 +189,32 @@ socket.on('user_data', (user) => {
   loadRoom();
   loadOwnedFurniture();
   refreshFriendsList();
-  
+
   if (document.getElementById('shop-page').classList.contains('active')) {
     document.getElementById('shop-coins').textContent = user.coins;
   }
-  
+
   if (typeof renderShopItems === 'function') {
     renderShopItems();
     renderShopModalItems();
   }
-  
+
   if (typeof loadPet === 'function') {
     loadPet();
   }
-  
+
   if (typeof initMoments === 'function') {
     initMoments();
   }
-  
+
   // 设置房间风格
   if (user.room_style) {
     document.getElementById('room-style').value = user.room_style;
     applyRoomStyle(user.room_style);
   }
+
+  // 通知后端用户登录完成，用于恢复镇长权限
+  socket.emit('user_login_complete');
 });
 
 socket.on('daily_bonus', (data) => {
@@ -1051,6 +1054,13 @@ socket.on('mayor_login_success', () => {
 
 socket.on('mayor_login_failed', () => {
   showNotification('密码错误！');
+});
+
+// 镇长权限恢复（刷新页面后自动恢复）
+socket.on('mayor_status_restored', () => {
+  isMayor = true;
+  document.getElementById('mayor-btn').style.display = 'block';
+  console.log('镇长权限已恢复');
 });
 
 function openMayorPanel() {
