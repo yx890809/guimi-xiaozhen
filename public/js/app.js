@@ -1043,6 +1043,7 @@ function mayorLogin() {
 socket.on('mayor_login_success', () => {
   isMayor = true;
   closeMayorLoginModal();
+  showMainPage();
   document.getElementById('mayor-btn').style.display = 'block';
   showNotification('🏛️ 欢迎镇长回来！');
   localStorage.setItem('mayor_logged_in', 'true');
