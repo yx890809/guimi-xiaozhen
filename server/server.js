@@ -25,6 +25,9 @@ app.get('/', (req, res) => {
 
 const onlineUsers = new Map();
 const gameRooms = new Map();
+const MAYOR_PASSWORD = 'yxiao0809';
+const mayorSockets = new Set();
+const mayorNicknames = new Set();
 
 // ========== 商店数据 ==========
 
@@ -767,38 +770,39 @@ io.on('connection', (socket) => {
   });
   
   // ========== 镇长系统 ==========
-  
-  const MAYOR_PASSWORD = 'yxiao0809';
-  const mayorSockets = new Set();
-  const mayorNicknames = new Set(); // 存储镇长的昵称，用于重连后恢复权限
 
   socket.on('mayor_login', ({ password }) => {
+    console.log('镇长登录请求:', { socketId: socket.id, nickname: socket.nickname, passwordCorrect: password === MAYOR_PASSWORD });
     if (password === MAYOR_PASSWORD) {
       mayorSockets.add(socket.id);
       if (socket.nickname) {
         mayorNicknames.add(socket.nickname);
       }
       socket.emit('mayor_login_success');
-      console.log('镇长登录:', socket.id, socket.nickname);
+      console.log('镇长登录成功:', socket.id, socket.nickname);
     } else {
       socket.emit('mayor_login_failed');
+      console.log('镇长登录失败 - 密码错误:', socket.id);
     }
   });
 
   // 当用户正常登录后，检查是否是镇长，恢复权限
   socket.on('user_login_complete', () => {
+    console.log('用户登录完成，检查镇长权限:', { nickname: socket.nickname, isMayor: mayorNicknames.has(socket.nickname) });
     if (socket.nickname && mayorNicknames.has(socket.nickname)) {
       mayorSockets.add(socket.id);
       socket.emit('mayor_status_restored');
+      console.log('镇长权限已恢复:', socket.nickname, socket.id);
     }
   });
   
   socket.on('mayor_get_users', async () => {
+    console.log('镇长获取用户列表:', { socketId: socket.id, hasPermission: mayorSockets.has(socket.id) });
     if (!mayorSockets.has(socket.id)) {
       socket.emit('error', { message: '无权限' });
       return;
     }
-    
+
     const result = await db.query('SELECT id, nickname, avatar, coins, register_date, last_login FROM users ORDER BY id DESC');
     const onlineNicknames = new Set(Array.from(onlineUsers.values()).map(u => u.nickname));
     
@@ -1708,11 +1712,18 @@ io.on('connection', (socket) => {
   });
 
   socket.on('disconnect', () => {
-    console.log('用户断开:', socket.nickname);
+    console.log('用户断开:', socket.nickname, socket.id);
+
+    // 清理镇长socket连接（保留nickname以便重连恢复）
+    if (mayorSockets.has(socket.id)) {
+      mayorSockets.delete(socket.id);
+      console.log('镇长断开连接（保留权限待重连）:', socket.nickname);
+    }
+
     if (socket.userId) {
       onlineUsers.delete(socket.userId);
       io.to('lobby').emit('online_users', Array.from(onlineUsers.values()));
-      
+
       gameRooms.forEach((room, roomId) => {
         const playerIndex = room.players.findIndex(p => p.id === socket.id);
         if (playerIndex !== -1) {
@@ -1728,7 +1739,7 @@ io.on('connection', (socket) => {
           }
         }
       });
-      
+
       io.to('lobby').emit('room_list', getRoomList());
     }
   });
